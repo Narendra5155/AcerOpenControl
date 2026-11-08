@@ -109,9 +109,7 @@ pub fn ensure_module() -> Result<()> {
     if Path::new(PROC_CALL).exists() {
         Ok(())
     } else {
-        Err(Error::Acpi(
-            "/proc/acpi/call is missing: install acpi-call-dkms and run 'sudo modprobe acpi_call'".into(),
-        ))
+        Err(Error::Acpi("/proc/acpi/call is missing: install acpi-call-dkms and run 'sudo modprobe acpi_call'".into()))
     }
 }
 

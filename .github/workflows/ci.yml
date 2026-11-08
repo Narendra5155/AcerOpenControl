@@ -12,9 +12,10 @@ jobs:
   rust:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: "1.93.1"
           components: rustfmt, clippy
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
@@ -23,7 +24,7 @@ jobs:
   python:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: sudo apt-get update && sudo apt-get install -y python3-gi gir1.2-gtk-4.0 gir1.2-adw-1
       - run: cd frontend && python3 -m unittest discover -s tests -t . -v
 
@@ -31,8 +32,10 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [rust, python]
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.93.1"
       - run: sudo apt-get update && sudo apt-get install -y lintian
       - run: cargo install cargo-deb --locked
       - run: packaging/build-all.sh dist

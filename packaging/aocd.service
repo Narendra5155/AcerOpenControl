@@ -1,6 +1,6 @@
 [Unit]
 Description=AcerOpenControl daemon (fan curves, keyboard light, firmware features)
-Documentation=https://github.com/narendra5155/acer-open-control
+Documentation=https://github.com/Narendra5155/AcerOpenControl
 After=systemd-modules-load.service
 # Two fan controllers would fight over the EC.
 Conflicts=nbfc_service.service acerfan.service

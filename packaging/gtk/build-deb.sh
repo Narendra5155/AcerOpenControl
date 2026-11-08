@@ -18,7 +18,7 @@ DEBVER="$CLVER"   # e.g. 0.2.0-1
 PKG=acer-open-control-gtk
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
-subst() { sed -e "s/@APP_ID@/$APP_ID/g" -e "s/@OWNER@/$OWNER/g" -e "s/@REPO@/$REPO/g" -e "s/@VERSION@/$VERSION/g" "$1"; }
+subst() { sed -e "s/@DEVELOPER_ID@/$DEVELOPER_ID/g" -e "s/@APP_ID@/$APP_ID/g" -e "s/@OWNER@/$OWNER/g" -e "s/@REPO@/$REPO/g" -e "s/@VERSION@/$VERSION/g" "$1"; }
 
 install -d "$STAGE/DEBIAN" "$STAGE/usr/bin" "$STAGE/usr/lib/python3/dist-packages/aoc_gtk" \
     "$STAGE/usr/share/applications" "$STAGE/usr/share/icons/hicolor/scalable/apps" \

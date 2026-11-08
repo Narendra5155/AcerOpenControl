@@ -168,7 +168,11 @@ pub fn fans(base: Option<&Path>, out_dir: &Path) -> Result<()> {
         dump.push(ec.read_ec(off, 1)?[0]);
     }
     for (row, chunk) in dump.chunks(16).enumerate() {
-        println!("  {:02X}: {}", 0xC0 + row * 16, chunk.iter().map(|b| format!("{b:02x}")).collect::<Vec<_>>().join(" "));
+        println!(
+            "  {:02X}: {}",
+            0xC0 + row * 16,
+            chunk.iter().map(|b| format!("{b:02x}")).collect::<Vec<_>>().join(" ")
+        );
     }
 
     let result = (|| -> Result<()> {
@@ -421,7 +425,9 @@ pub fn generate(dir: &Path, machine: &Machine) -> Result<(Profile, Vec<String>)>
                 notes.push("fan probe: fans did not audibly change; fan control may not work".into());
             }
         }
-        None => notes.push(format!("no {FANS_FILE}: fan settings are template defaults (run 'sudo aocctl probe fans')")),
+        None => {
+            notes.push(format!("no {FANS_FILE}: fan settings are template defaults (run 'sudo aocctl probe fans')"))
+        }
     }
 
     match load_json(dir, FEATURES_FILE) {

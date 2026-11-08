@@ -7,8 +7,8 @@ version = "0.2.0"
 edition = "2021"
 license = "GPL-3.0-or-later"
 authors = ["Narendra Hindwar <hindwarnarendra@gmail.com>"]
-repository = "https://github.com/narendra5155/acer-open-control"
-homepage = "https://github.com/narendra5155/acer-open-control"
+repository = "https://github.com/Narendra5155/AcerOpenControl"
+homepage = "https://github.com/Narendra5155/AcerOpenControl"
 rust-version = "1.75"
 
 [workspace.dependencies]

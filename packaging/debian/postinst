@@ -6,7 +6,7 @@ if [ "$1" = "configure" ]; then
 
     if ! modprobe acpi_call 2>/dev/null; then
         echo "acer-open-control: could not load the acpi_call module." >&2
-        echo "  If Secure Boot is on, enrol the DKMS signing key (see https://github.com/narendra5155/acer-open-control/blob/main/docs/INSTALL.md#secure-boot)." >&2
+        echo "  If Secure Boot is on, enrol the DKMS signing key (see https://github.com/Narendra5155/AcerOpenControl/blob/main/docs/INSTALL.md#secure-boot)." >&2
     fi
 
     # The Python prototype ran its own service; two controllers would fight.

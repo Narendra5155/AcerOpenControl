@@ -136,9 +136,9 @@ impl Firmware for FakeFirmware {
                 }
                 echo
             }
-            0x77 => Value::Int(
-                ((s.charge_stop as u64) << 16) | ((s.charge_start as u64) << 8) | s.charge_enabled as u64,
-            ),
+            0x77 => {
+                Value::Int(((s.charge_stop as u64) << 16) | ((s.charge_start as u64) << 8) | s.charge_enabled as u64)
+            }
             0x22 => {
                 s.webcam_on = arg != 0;
                 echo

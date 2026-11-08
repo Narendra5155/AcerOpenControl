@@ -1,7 +1,7 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: acer-open-control
 Upstream-Contact: Narendra Hindwar <hindwarnarendra@gmail.com>
-Source: https://github.com/narendra5155/acer-open-control
+Source: https://github.com/Narendra5155/AcerOpenControl
 
 Files: *
 Copyright: 2026 Narendra Hindwar

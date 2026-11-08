@@ -369,7 +369,7 @@ class AocApp(Adw.Application):
         Adw.AboutDialog(application_name=APP_NAME, version=__version__, application_icon=APP_ID,
                         comments="Fan, keyboard and firmware control for Clevo-based Acer laptops.\n"
                                  "Unofficial; not affiliated with or endorsed by Acer Inc.",
-                        website="https://github.com/narendra5155/acer-open-control",
+                        website="https://github.com/Narendra5155/AcerOpenControl",
                         license_type=Gtk.License.GPL_3_0).present(self.props.active_window)
 
 

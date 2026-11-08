@@ -257,7 +257,8 @@ fn run(cli: Cli) -> Result<()> {
                 req["b"] = json!(b);
             }
             if let Some(b) = brightness {
-                req["brightness"] = json!(if b == "off" { 0 } else { b.parse::<u8>().context("brightness must be 0..255 or off")? });
+                req["brightness"] =
+                    json!(if b == "off" { 0 } else { b.parse::<u8>().context("brightness must be 0..255 or off")? });
             }
             if req.as_object().unwrap().len() == 1 {
                 bail!("give --color and/or --brightness");
@@ -288,13 +289,25 @@ fn run(cli: Cli) -> Result<()> {
             if json {
                 println!("{}", serde_json::to_string_pretty(&m)?);
             } else if m["model"].is_null() {
-                println!("No model profile matches this machine ({}). Daemon is read-only.", m["machine"]["product_name"]);
+                println!(
+                    "No model profile matches this machine ({}). Daemon is read-only.",
+                    m["machine"]["product_name"]
+                );
             } else {
-                println!("{} ({}), status: {}", m["model"]["name"].as_str().unwrap_or(""), m["model"]["id"].as_str().unwrap_or(""), m["model"]["status"].as_str().unwrap_or(""));
+                println!(
+                    "{} ({}), status: {}",
+                    m["model"]["name"].as_str().unwrap_or(""),
+                    m["model"]["id"].as_str().unwrap_or(""),
+                    m["model"]["status"].as_str().unwrap_or("")
+                );
                 println!("profile file: {}", m["path"].as_str().unwrap_or("?"));
                 println!("capabilities: {}", m["capabilities"]);
                 for p in m["perf_profiles"].as_array().into_iter().flatten() {
-                    println!("  profile {:<12} {}", p["key"].as_str().unwrap_or(""), p["description"].as_str().unwrap_or(""));
+                    println!(
+                        "  profile {:<12} {}",
+                        p["key"].as_str().unwrap_or(""),
+                        p["description"].as_str().unwrap_or("")
+                    );
                 }
             }
         }
@@ -338,7 +351,10 @@ fn profiles(cmd: ProfilesCmd) -> Result<()> {
         ProfilesCmd::List => {
             let machine = Machine::detect();
             let (loaded, errors) = profile::load_default_dirs();
-            println!("This machine: {:?} (board {:?}, BIOS {:?})", machine.product_name, machine.board_name, machine.bios_version);
+            println!(
+                "This machine: {:?} (board {:?}, BIOS {:?})",
+                machine.product_name, machine.board_name, machine.bios_version
+            );
             let clevo = machine.has_wmi_guid("ABBC0F6D-8EA1-11D1-00A0-C90629100000");
             println!("Clevo WMI interface: {}", if clevo { "present" } else { "NOT present" });
             println!();
@@ -365,7 +381,9 @@ fn profiles(cmd: ProfilesCmd) -> Result<()> {
             for n in &notes {
                 println!("# NOTE: {n}");
             }
-            println!("# Install for testing: sudo cp FILE /etc/acer-open-control/models.d/ && sudo systemctl restart aocd\n");
+            println!(
+                "# Install for testing: sudo cp FILE /etc/acer-open-control/models.d/ && sudo systemctl restart aocd\n"
+            );
             print!("{}", toml::to_string_pretty(&p)?);
         }
     }

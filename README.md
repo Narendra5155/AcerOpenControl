@@ -44,9 +44,9 @@ present**, follow [ADDING_A_MODEL.md](docs/ADDING_A_MODEL.md). Laptops without i
 ## Install (Ubuntu 24.04 or newer)
 
 ```sh
-curl -fsSL https://narendra5155.github.io/acer-open-control/key.gpg \
+curl -fsSL https://narendra5155.github.io/AcerOpenControl/key.gpg \
   | sudo tee /usr/share/keyrings/acer-open-control.gpg >/dev/null
-echo "deb [signed-by=/usr/share/keyrings/acer-open-control.gpg] https://narendra5155.github.io/acer-open-control stable main" \
+echo "deb [signed-by=/usr/share/keyrings/acer-open-control.gpg] https://narendra5155.github.io/AcerOpenControl stable main" \
   | sudo tee /etc/apt/sources.list.d/acer-open-control.list
 sudo apt update
 sudo apt install acer-open-control-gtk

@@ -14,15 +14,8 @@ use std::os::unix::net::UnixStream;
 
 pub const ADMIN_GROUPS: &[&str] = &["sudo", "admin", "wheel", "acer-open-control"];
 
-const MUTATING: &[&str] = &[
-    "set_mode",
-    "set_curve",
-    "reapply",
-    "set_kbd",
-    "set_perf_profile",
-    "set_charge_limit",
-    "set_webcam",
-];
+const MUTATING: &[&str] =
+    &["set_mode", "set_curve", "reapply", "set_kbd", "set_perf_profile", "set_charge_limit", "set_webcam"];
 
 pub fn is_mutating(cmd: &str) -> bool {
     MUTATING.contains(&cmd)

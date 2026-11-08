@@ -3,7 +3,7 @@
 ## Toolchain
 
 ```sh
-# Rust 1.75 or newer, with rustfmt and clippy
+# Rust 1.75 or newer, with rustfmt and clippy (CI pins 1.93.1, same as Ubuntu 26.04)
 sudo apt install cargo rustc rustfmt rust-clippy        # or: rustup (https://rustup.rs)
 cargo install cargo-deb --locked                        # builds the backend .deb
 

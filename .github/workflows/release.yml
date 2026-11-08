@@ -11,14 +11,16 @@ jobs:
   release:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Check tag matches version
         run: |
           v="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
           [ "v$v" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME != Cargo.toml v$v"; exit 1; }
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.93.1"
       - run: sudo apt-get update && sudo apt-get install -y lintian apt-utils
       - run: cargo install cargo-deb --locked
       - run: cargo test --workspace --all-features

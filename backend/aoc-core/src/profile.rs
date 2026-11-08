@@ -269,7 +269,7 @@ impl Profile {
             if f.rpm_dividend == 0 {
                 return Err(bad("fans.rpm_dividend must be > 0"));
             }
-            if f.rpm_offsets.iter().any(|&o| o == 0xFF) {
+            if f.rpm_offsets.contains(&0xFF) {
                 return Err(bad("fans.rpm_offsets must leave room for a 2-byte read"));
             }
         }
@@ -352,11 +352,7 @@ fn read_trim(p: &str) -> String {
 impl Machine {
     pub fn detect() -> Machine {
         let mut wmi_guids: Vec<String> = fs::read_dir("/sys/bus/wmi/devices")
-            .map(|rd| {
-                rd.filter_map(|e| e.ok())
-                    .map(|e| e.file_name().to_string_lossy().to_uppercase())
-                    .collect()
-            })
+            .map(|rd| rd.filter_map(|e| e.ok()).map(|e| e.file_name().to_string_lossy().to_uppercase()).collect())
             .unwrap_or_default();
         wmi_guids.sort();
         Machine {
@@ -440,8 +436,10 @@ mod tests {
             product_name: "Aspire A715-79G".into(),
             board_name: "x".into(),
             bios_version: "1.07.01RAC5".into(),
-            wmi_guids: vec!["ABBC0F6B-8EA1-11D1-00A0-C90629100000".into(),
-                            "ABBC0F6D-8EA1-11D1-00A0-C90629100000".into()],
+            wmi_guids: vec![
+                "ABBC0F6B-8EA1-11D1-00A0-C90629100000".into(),
+                "ABBC0F6D-8EA1-11D1-00A0-C90629100000".into(),
+            ],
         }
     }
 

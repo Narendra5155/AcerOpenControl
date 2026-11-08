@@ -44,9 +44,7 @@ pub fn camera_present() -> bool {
     fs::read_dir("/sys/bus/usb/devices")
         .map(|rd| {
             rd.filter_map(|e| e.ok()).any(|e| {
-                fs::read_to_string(e.path().join("product"))
-                    .map(|p| p.to_lowercase().contains("cam"))
-                    .unwrap_or(false)
+                fs::read_to_string(e.path().join("product")).map(|p| p.to_lowercase().contains("cam")).unwrap_or(false)
             })
         })
         .unwrap_or(false)
@@ -109,11 +107,7 @@ impl Features {
     pub fn get_charge(&self) -> Result<ChargeLimit> {
         let b = self.ec.profile.battery.as_ref().ok_or(Error::Unsupported("battery charge limit"))?;
         let v = self.ec.get(b.read_cmd, 0)?;
-        Ok(ChargeLimit {
-            enabled: v & 0xFF != 0,
-            start: ((v >> 8) & 0xFF) as u8,
-            stop: ((v >> 16) & 0xFF) as u8,
-        })
+        Ok(ChargeLimit { enabled: v & 0xFF != 0, start: ((v >> 8) & 0xFF) as u8, stop: ((v >> 16) & 0xFF) as u8 })
     }
 
     pub fn set_charge(&self, lim: ChargeLimit) -> Result<ChargeLimit> {

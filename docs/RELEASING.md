@@ -8,15 +8,12 @@ Releases are built by GitHub Actions when a `vX.Y.Z` tag is pushed:
 
 ## One-time setup
 
-### 1. Create the GitHub repository
+### 1. The GitHub repository
 
-```sh
-gh repo create acer-open-control --public --source . --remote origin
-git push -u origin main
-```
-
-If your GitHub account isn't `narendra5155`, run `packaging/set-owner.sh YOUR_USER`
-first and commit the result. It updates the URLs, the app ID and `packaging/meta.env`.
+The project lives at `github.com/Narendra5155/AcerOpenControl`. `OWNER` and `REPO`
+in `packaging/meta.env` must match it exactly, because GitHub Pages paths are
+case-sensitive. For a fork, run `packaging/set-owner.sh NEW_OWNER` and commit the
+result; it updates the URLs, the app ID and `packaging/meta.env`.
 
 ### 2. Create the repository signing key
 
@@ -42,7 +39,7 @@ local copy. If the key is lost, every user has to re-import a new one.
 
 The first release creates the `gh-pages` branch. After it has run, set
 **Settings → Pages → Source: Deploy from a branch → `gh-pages` / root**. The
-repository is then served at `https://OWNER.github.io/acer-open-control/`.
+repository is then served at `https://narendra5155.github.io/AcerOpenControl/`.
 
 ## Each release
 
@@ -68,8 +65,8 @@ repository is then served at `https://OWNER.github.io/acer-open-control/`.
    ```sh
    docker run --rm -it ubuntu:24.04 bash -c '
      apt-get update && apt-get install -y curl ca-certificates &&
-     curl -fsSL https://OWNER.github.io/acer-open-control/key.gpg -o /usr/share/keyrings/acer-open-control.gpg &&
-     echo "deb [signed-by=/usr/share/keyrings/acer-open-control.gpg] https://OWNER.github.io/acer-open-control stable main" > /etc/apt/sources.list.d/aoc.list &&
+     curl -fsSL https://narendra5155.github.io/AcerOpenControl/key.gpg -o /usr/share/keyrings/acer-open-control.gpg &&
+     echo "deb [signed-by=/usr/share/keyrings/acer-open-control.gpg] https://narendra5155.github.io/AcerOpenControl stable main" > /etc/apt/sources.list.d/aoc.list &&
      apt-get update && apt-get install -y --no-install-recommends acer-open-control-gtk && aocctl --version'
    ```
 
@@ -82,7 +79,7 @@ repository is then served at `https://OWNER.github.io/acer-open-control/`.
 needs `apt-utils` and the signing key in your keyring:
 
 ```sh
-git clone --branch gh-pages https://github.com/OWNER/acer-open-control site
+git clone --branch gh-pages https://github.com/Narendra5155/AcerOpenControl site
 packaging/build-all.sh dist
 packaging/apt/publish-repo.sh dist site "$KEYID"
 cd site && git add -A && git commit -m "Publish vX.Y.Z" && git push

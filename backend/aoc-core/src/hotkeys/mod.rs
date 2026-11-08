@@ -40,7 +40,8 @@ mod tests {
     fn filter() {
         let p = a715();
         let cfg = p.hotkeys.as_ref().unwrap();
-        let ev = |class: &str, bus: &str, kind| AcpiEvent { device_class: class.into(), bus_id: bus.into(), kind, data: 0 };
+        let ev =
+            |class: &str, bus: &str, kind| AcpiEvent { device_class: class.into(), bus_id: bus.into(), kind, data: 0 };
         assert!(is_hotkey_event(cfg, &ev("", "ABBC0F6B-8EA1-1", 0xD0)));
         assert!(!is_hotkey_event(cfg, &ev("ac_adapter", "ACPI0003:00", 0x80)));
         assert!(!is_hotkey_event(cfg, &ev("", "ABBC0F6B-8EA1-1", 0x80)));

@@ -81,11 +81,7 @@ pub struct SystemSensors {
 
 impl Default for SystemSensors {
     fn default() -> Self {
-        SystemSensors {
-            gpu_dev: nvidia_pci_dev(),
-            cache: Mutex::new((None, None)),
-            cache_for: Duration::from_secs(2),
-        }
+        SystemSensors { gpu_dev: nvidia_pci_dev(), cache: Mutex::new((None, None)), cache_for: Duration::from_secs(2) }
     }
 }
 

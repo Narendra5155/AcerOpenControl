@@ -13,7 +13,7 @@
   <launchable type="desktop-id">@APP_ID@.desktop</launchable>
   <url type="homepage">https://github.com/@OWNER@/@REPO@</url>
   <url type="bugtracker">https://github.com/@OWNER@/@REPO@/issues</url>
-  <developer id="io.github.@OWNER@">
+  <developer id="@DEVELOPER_ID@">
     <name>Narendra Hindwar</name>
   </developer>
   <content_rating type="oars-1.1"/>

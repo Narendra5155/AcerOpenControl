@@ -61,7 +61,8 @@ impl VirtualKeyboard {
         for &k in keys {
             ioctl_int(&file, UI_SET_KEYBIT, k as i32)?;
         }
-        let mut setup = UinputSetup { bustype: BUS_HOST, vendor: 0xAC37, product: 1, version: 1, name: [0; 80], ff_effects_max: 0 };
+        let mut setup =
+            UinputSetup { bustype: BUS_HOST, vendor: 0xAC37, product: 1, version: 1, name: [0; 80], ff_effects_max: 0 };
         let n = name.len().min(79);
         setup.name[..n].copy_from_slice(&name.as_bytes()[..n]);
         // SAFETY: UI_DEV_SETUP with a correctly laid out uinput_setup.

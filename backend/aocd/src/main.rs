@@ -76,9 +76,7 @@ fn migrate_legacy_config(target: &Path) {
 }
 
 fn main() {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
-        .format_timestamp(None)
-        .init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).format_timestamp(None).init();
     if let Err(e) = run() {
         log::error!("{e:#}");
         std::process::exit(1);
@@ -176,7 +174,15 @@ fn build_real(args: &Args) -> (Service, bool) {
         (None, _) => None,
     };
     let fw_ok = fw.is_some();
-    let mut s = Service::new(machine, selected, fw, cfg, Box::new(SystemSensors::default()), saver(args.config.clone()), clock());
+    let mut s = Service::new(
+        machine,
+        selected,
+        fw,
+        cfg,
+        Box::new(SystemSensors::default()),
+        saver(args.config.clone()),
+        clock(),
+    );
     s.ac_path = service::find_mains_online();
     (s, fw_ok)
 }

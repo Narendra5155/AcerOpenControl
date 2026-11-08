@@ -107,7 +107,11 @@ impl Listener {
         addr.nl_family = libc::AF_NETLINK as u16;
         // SAFETY: addr is a properly sized sockaddr_nl.
         let r = unsafe {
-            libc::bind(fd.as_raw_fd(), &addr as *const _ as *const libc::sockaddr, size_of::<libc::sockaddr_nl>() as u32)
+            libc::bind(
+                fd.as_raw_fd(),
+                &addr as *const _ as *const libc::sockaddr,
+                size_of::<libc::sockaddr_nl>() as u32,
+            )
         };
         if r < 0 {
             return Err(io::Error::last_os_error());
@@ -182,9 +186,10 @@ impl Listener {
                 for (_, g) in attrs(v) {
                     let a = attrs(g);
                     let gname = a.iter().find(|(t, _)| *t == CTRL_ATTR_MCAST_GRP_NAME).map(|(_, v)| cstr(v));
-                    let gid = a.iter().find(|(t, _)| *t == CTRL_ATTR_MCAST_GRP_ID).and_then(|(_, v)| {
-                        v.get(..4).map(|b| u32::from_ne_bytes(b.try_into().unwrap()))
-                    });
+                    let gid = a
+                        .iter()
+                        .find(|(t, _)| *t == CTRL_ATTR_MCAST_GRP_ID)
+                        .and_then(|(_, v)| v.get(..4).map(|b| u32::from_ne_bytes(b.try_into().unwrap())));
                     if gname.as_deref() == Some(group) {
                         grp = gid;
                     }

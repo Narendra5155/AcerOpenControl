@@ -156,7 +156,7 @@ impl Service {
     }
 
     // -- fan control -------------------------------------------------------------------
-    fn to_bios(&mut self, reason: Option<&str>) -> aoc_core::Result<()> {
+    fn hand_to_bios(&mut self, reason: Option<&str>) -> aoc_core::Result<()> {
         if let Some(ec) = &self.ec {
             if ec.profile.fans.is_some() {
                 ec.set_auto()?;
@@ -187,7 +187,7 @@ impl Service {
                 log::error!("tick failed ({}): {e}", self.hw_fails);
                 if self.hw_fails >= HW_FAIL_LIMIT {
                     self.fault = Some(format!("hardware error: {e}"));
-                    let _ = self.to_bios(Some("repeated hardware errors"));
+                    let _ = self.hand_to_bios(Some("repeated hardware errors"));
                 }
             }
         }
@@ -228,7 +228,7 @@ impl Service {
             self.emergency = false;
             self.target = None;
             if self.applied_duty.is_some() || self.force {
-                self.to_bios(None)?;
+                self.hand_to_bios(None)?;
             }
             self.force = false;
             return Ok(());
@@ -239,7 +239,7 @@ impl Service {
             if self.sensor_fails >= SENSOR_FAIL_LIMIT {
                 self.fault = Some("CPU temperature unavailable".into());
                 if self.applied_duty.is_some() || self.force {
-                    self.to_bios(Some("CPU temperature unavailable"))?;
+                    self.hand_to_bios(Some("CPU temperature unavailable"))?;
                 }
                 self.force = false;
             }
@@ -286,7 +286,8 @@ impl Service {
 
     fn model_info(&self) -> Value {
         let m = &self.machine;
-        let machine = json!({"product_name": m.product_name, "board_name": m.board_name, "bios_version": m.bios_version});
+        let machine =
+            json!({"product_name": m.product_name, "board_name": m.board_name, "bios_version": m.bios_version});
         match &self.profile {
             None => json!({"ok": true, "read_only": true, "model": null, "machine": machine,
                            "capabilities": {}, "perf_profiles": []}),
@@ -622,7 +623,8 @@ impl Service {
         let Ok(online) = std::fs::read_to_string(path).map(|s| s.trim().to_string()) else { return };
         let changed = self.ac_online.as_ref().is_some_and(|prev| *prev != online);
         if changed && self.hotkeys_enabled {
-            let method = self.profile.as_ref().and_then(|p| p.hotkeys.as_ref()).and_then(|h| h.ac_adjust_method.clone());
+            let method =
+                self.profile.as_ref().and_then(|p| p.hotkeys.as_ref()).and_then(|h| h.ac_adjust_method.clone());
             if let (Some(ec), Some(m)) = (&self.ec, method) {
                 match ec.call_path(&m, &[aoc_core::acpi::Arg::Int(0)]) {
                     Ok(_) => log::info!("charger {}: ran {m}", if online == "1" { "connected" } else { "removed" }),
@@ -634,7 +636,7 @@ impl Service {
     }
 
     pub fn shutdown(&mut self) {
-        if let Err(e) = self.to_bios(Some("daemon stopping")) {
+        if let Err(e) = self.hand_to_bios(Some("daemon stopping")) {
             log::error!("could not restore BIOS fan control: {e}");
         }
     }

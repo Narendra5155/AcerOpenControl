@@ -13,9 +13,9 @@ work. Other distributions can build from source.
 ## 1. From the APT repository (recommended)
 
 ```sh
-curl -fsSL https://narendra5155.github.io/acer-open-control/key.gpg \
+curl -fsSL https://narendra5155.github.io/AcerOpenControl/key.gpg \
   | sudo tee /usr/share/keyrings/acer-open-control.gpg >/dev/null
-echo "deb [signed-by=/usr/share/keyrings/acer-open-control.gpg] https://narendra5155.github.io/acer-open-control stable main" \
+echo "deb [signed-by=/usr/share/keyrings/acer-open-control.gpg] https://narendra5155.github.io/AcerOpenControl stable main" \
   | sudo tee /etc/apt/sources.list.d/acer-open-control.list
 sudo apt update
 sudo apt install acer-open-control-gtk      # or just acer-open-control for CLI only
@@ -27,7 +27,7 @@ with `sudo apt upgrade`.
 
 ## 2. From a downloaded .deb
 
-Download both files from the [releases page](https://github.com/narendra5155/acer-open-control/releases),
+Download both files from the [releases page](https://github.com/Narendra5155/AcerOpenControl/releases),
 then install them together so apt can resolve dependencies:
 
 ```sh
