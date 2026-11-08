@@ -3,7 +3,7 @@ resolver = "2"
 members = ["backend/aoc-core", "backend/aocd", "backend/aocctl"]
 
 [workspace.package]
-version = "0.2.0"
+version = "0.2.2"
 edition = "2021"
 license = "GPL-3.0-or-later"
 authors = ["Narendra Hindwar <hindwarnarendra@gmail.com>"]
