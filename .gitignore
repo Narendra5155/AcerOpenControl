@@ -1,0 +1,6 @@
+acpi-analysis/*
+acpidump.txt
+feature-probe.json
+probe-results.json
+__pycache__/*
+*.pyc

@@ -1,0 +1,19 @@
+[Unit]
+Description=AcerFan - fan control daemon for Acer Aspire 7 A715-79G
+After=systemd-modules-load.service
+Conflicts=nbfc_service.service
+
+[Service]
+Type=simple
+Environment=PYTHONPATH=/opt/acerfan PYTHONDONTWRITEBYTECODE=1
+ExecStartPre=/sbin/modprobe acpi_call
+ExecStart=/usr/bin/python3 -m acerfan daemon
+# Belt and braces: even if the daemon is killed with SIGKILL, give the fans back to the BIOS.
+ExecStopPost=/usr/bin/python3 -m acerfan restore-auto
+Restart=on-failure
+RestartSec=3
+RuntimeDirectory=acerfan
+RuntimeDirectoryMode=0755
+
+[Install]
+WantedBy=multi-user.target
