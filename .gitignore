@@ -1,6 +1,13 @@
-acpi-analysis/*
+# Raw firmware dumps: acpidump/MSDM contain this machine's Windows product key.
+# Never commit them. Findings are documented in docs/HARDWARE.md instead.
 acpidump.txt
-feature-probe.json
-probe-results.json
-__pycache__/*
+acpi-analysis/
+research/**/raw/
+*.dat
+*.dsl
+
+# Build output
+/target/
+/dist/
+__pycache__/
 *.pyc

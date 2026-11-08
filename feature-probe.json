@@ -1,0 +1,100 @@
+{
+ "gets": {
+  "0x5": "0x1",
+  "0x6": "0x1",
+  "0x7": "expected integer result, got '{0x00, 0x00, 0x0d, 0x59, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,'",
+  "0x9": "0x1",
+  "0xa": "0x1",
+  "0x11": "0x0",
+  "0x3d": "0x1",
+  "0x3e": "0x0",
+  "0x52": "0x4690025",
+  "0x60": "0x21c",
+  "0x77": "0x645f00",
+  "0x7a": "0x70020053"
+ },
+ "cpcm": 3,
+ "kbd_order": {
+  "blue": 16,
+  "red": 8,
+  "green": 0
+ },
+ "kbd_levels": [
+  {
+   "value": 0,
+   "cnt3d": "0x1"
+  },
+  {
+   "value": 32,
+   "cnt3d": "0x1"
+  },
+  {
+   "value": 96,
+   "cnt3d": "0x1"
+  },
+  {
+   "value": 160,
+   "cnt3d": "0x1"
+  },
+  {
+   "value": 255,
+   "cnt3d": "0x1"
+  }
+ ],
+ "perf": {
+  "before": {
+   "constraint_0": 200,
+   "constraint_1": 115,
+   "gpu_limit": "[N/A], 60.00 W"
+  },
+  "0": {
+   "constraint_0": 15,
+   "constraint_1": 30,
+   "gpu_limit": "[N/A], 60.00 W"
+  },
+  "1": {
+   "constraint_0": 15,
+   "constraint_1": 30,
+   "gpu_limit": "[N/A], 60.00 W"
+  },
+  "2": {
+   "constraint_0": 90,
+   "constraint_1": 115,
+   "gpu_limit": "[N/A], 70.00 W"
+  },
+  "3": {
+   "constraint_0": 45,
+   "constraint_1": 115,
+   "gpu_limit": "[N/A], 60.00 W"
+  }
+ },
+ "webcam": {
+  "before": 1,
+  "works": true,
+  "restored": true,
+  "off_value": 0,
+  "changed": 0
+ },
+ "wireless": {
+  "before": "bluetooth unblocked unblocked | wlan      unblocked unblocked",
+  "works": false,
+  "restored": true
+ },
+ "caps": {
+  "kbd_rgb": true,
+  "kbd_channel_shift": {
+   "blue": 16,
+   "red": 8,
+   "green": 0
+  },
+  "kbd_bright_max": 255,
+  "kbd_off_works": true,
+  "perf_profile": true,
+  "webcam_switch": true,
+  "webcam_off_value": 0,
+  "wireless_switch": false,
+  "wireless_off_value": null,
+  "touchpad_switch": false,
+  "battery_limit": true
+ }
+}
