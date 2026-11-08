@@ -1,0 +1,47 @@
+.TH AOCCTL 1 "2026-11-08" "acer-open-control 0.2.0" "User Commands"
+.SH NAME
+aocctl \- control fans, keyboard light and firmware features (AcerOpenControl)
+.SH SYNOPSIS
+.B aocctl
+.I command
+.RI [ args ]
+.SH COMMANDS
+.TP
+.B status \fR[\fB\-\-json\fR]
+Temperatures, fan speeds, mode and feature state.
+.TP
+.BI mode " auto|silent|balanced|performance|max|custom"
+Set the fan mode.
+.TP
+.BR curve " [\fITEMP:DUTY\fR ...]"
+Show or set the custom fan curve.
+.TP
+.B kbd \fR[\fB\-\-color\fR \fIRRGGBB|name\fR] [\fB\-\-brightness\fR \fI0..255|off\fR]
+Keyboard backlight.
+.TP
+.BI profile " key|bios"
+Firmware performance profile.
+.TP
+.BR charge " \fIstop\fR|off [\fB\-\-start\fR \fIpercent\fR]"
+Battery charge limit.
+.TP
+.BR webcam " on|off"
+Webcam power.
+.TP
+.B model
+Matched model profile and capabilities.
+.TP
+.B reapply
+Resend all settings (used after resume).
+.TP
+.B restore\-auto
+Hand fans back to the BIOS without the daemon (root).
+.TP
+.BR probe " fans|features|keys"
+Hardware probes for creating a profile for a new model (root).
+.TP
+.BR profiles " list|check \fIfile\fR|generate [\fIdir\fR]"
+Model profile tools.
+.SH SEE ALSO
+.BR aocd (8),
+/usr/share/doc/acer-open-control/USAGE.md

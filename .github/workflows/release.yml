@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check tag matches version
+        run: |
+          v="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
+          [ "v$v" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME != Cargo.toml v$v"; exit 1; }
+
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install -y lintian apt-utils
+      - run: cargo install cargo-deb --locked
+      - run: cargo test --workspace --all-features
+      - run: packaging/build-all.sh dist
+      - run: lintian --fail-on error --suppress-tags-from-file packaging/lintian-overrides.txt dist/*.deb
+
+      - name: GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.deb
+          generate_release_notes: true
+
+      - name: Import signing key
+        id: gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.APT_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.APT_GPG_PASSPHRASE }}
+
+      - name: Check out gh-pages
+        run: |
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null; then
+            git clone --depth 1 --branch gh-pages "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" site
+          else
+            mkdir site && cd site && git init -b gh-pages \
+              && git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}"
+          fi
+
+      - name: Publish APT repository
+        run: packaging/apt/publish-repo.sh dist site "${{ steps.gpg.outputs.keyid }}"
+
+      - name: Push gh-pages
+        run: |
+          cd site
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Publish ${GITHUB_REF_NAME}"
+          git push origin gh-pages

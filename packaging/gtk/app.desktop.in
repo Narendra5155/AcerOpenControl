@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=AcerOpenControl
+GenericName=Fan and Keyboard Control
+Comment=Fan curves, keyboard light, performance profiles and battery limit
+Exec=aoc-gtk
+Icon=@APP_ID@
+Terminal=false
+Categories=Settings;HardwareSettings;
+Keywords=fan;temperature;cooling;keyboard;backlight;battery;acer;clevo;
+StartupNotify=true

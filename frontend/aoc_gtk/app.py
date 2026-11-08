@@ -1,11 +1,12 @@
-"""AcerFan GTK4 / libadwaita window. Talks to acerfand over its Unix socket."""
+"""AcerOpenControl GTK4 / libadwaita window. Talks to aocd over its Unix socket."""
 
 from __future__ import annotations
 
 import sys
 import threading
 import time
-from typing import Callable, Optional
+from typing import Optional
+from collections.abc import Callable
 
 import gi
 
@@ -13,21 +14,18 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
-from .. import __version__  # noqa: E402
-from ..client import DaemonUnavailable, request  # noqa: E402
-from ..curve import PROFILES  # noqa: E402
-from ..features import PERF_PROFILES  # noqa: E402
+from . import APP_ID, APP_NAME, __version__  # noqa: E402
+from .client import DaemonUnavailable, describe_error, request  # noqa: E402
+from .compat import ModeSwitcher  # noqa: E402
 from .curve_editor import CurveEditor  # noqa: E402
 from .pages import PAGE_CSS, KeyboardPage, SystemPage  # noqa: E402
 
-APP_ID = "io.github.acerfan.AcerFan"
-
 MODES = [
-    ("auto", "Auto", "The laptop's BIOS controls the fans itself. AcerFan only watches."),
+    ("auto", "Auto", "The laptop's BIOS controls the fans itself. AcerOpenControl only watches."),
     ("silent", "Silent", "Quiet curve: fans stay slow until the machine gets warm."),
     ("balanced", "Balanced", "Linux picks the speed from the hotter of CPU and GPU."),
     ("performance", "Performance", "Cool-first curve: fans ramp early and stay faster."),
-    ("max", "Max", "Both fans at full speed."),
+    ("max", "Max", "All fans at full speed."),
     ("custom", "Custom", "Your own curve. Drag the points below, then Apply."),
 ]
 MODE_DESC = {k: d for k, _, d in MODES}
@@ -75,22 +73,23 @@ class StatCard(Gtk.Box):
 
 class MainWindow(Adw.ApplicationWindow):
     def __init__(self, app):
-        super().__init__(application=app, title="AcerFan")
+        super().__init__(application=app, title=APP_NAME)
         self.set_default_size(620, 760)
         self.cfg: Optional[dict] = None
+        self.presets: dict = {}
+        self.model: Optional[dict] = None
         self.mode: Optional[str] = None
         self.draft: Optional[list] = None
-        self._updating = False
+        self.read_only = False
         self._alive = True
 
         view = Adw.ToolbarView()
         header = Adw.HeaderBar()
         menu = Gio.Menu()
-        menu.append("About AcerFan", "app.about")
+        menu.append(f"About {APP_NAME}", "app.about")
         header.pack_end(Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=menu))
         self.stack = Adw.ViewStack()
-        header.set_title_widget(Adw.ViewSwitcher(stack=self.stack,
-                                                 policy=Adw.ViewSwitcherPolicy.WIDE))
+        header.set_title_widget(Adw.ViewSwitcher(stack=self.stack, policy=Adw.ViewSwitcherPolicy.WIDE))
         view.add_top_bar(header)
         self.banner = Adw.Banner()
         view.add_top_bar(self.banner)
@@ -98,50 +97,43 @@ class MainWindow(Adw.ApplicationWindow):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=22,
                       margin_top=18, margin_bottom=24, margin_start=16, margin_end=16)
 
-        # -- live stats --------------------------------------------------------
-        grid = Gtk.Grid(column_spacing=10, row_spacing=10, column_homogeneous=True)
+        # -- live stats ---------------------------------------------------------
+        self.grid = Gtk.Grid(column_spacing=10, row_spacing=10, column_homogeneous=True)
         self.card_cpu = StatCard("CPU")
         self.card_gpu = StatCard("GPU")
-        self.card_f1 = StatCard("FAN 1 · CPU")
-        self.card_f2 = StatCard("FAN 2 · GPU")
-        grid.attach(self.card_cpu, 0, 0, 1, 1)
-        grid.attach(self.card_gpu, 1, 0, 1, 1)
-        grid.attach(self.card_f1, 0, 1, 1, 1)
-        grid.attach(self.card_f2, 1, 1, 1, 1)
-        box.append(grid)
+        self.grid.attach(self.card_cpu, 0, 0, 1, 1)
+        self.grid.attach(self.card_gpu, 1, 0, 1, 1)
+        self.fan_cards: list = []
+        self._set_fan_labels(["CPU", "GPU"])
+        box.append(self.grid)
 
-        # -- mode ----------------------------------------------------------------
-        mode_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        # -- mode -------------------------------------------------------------------
+        self.mode_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         lbl = Gtk.Label(label="Fan mode", xalign=0)
         lbl.add_css_class("heading")
-        mode_box.append(lbl)
-        self.toggles = Adw.ToggleGroup()
-        self.toggles.add_css_class("round")
-        for key, label, _ in MODES:
-            self.toggles.add(Adw.Toggle(name=key, label=label))
-        self.toggles.connect("notify::active-name", self._on_mode_toggled)
-        sw = Gtk.ScrolledWindow(vscrollbar_policy=Gtk.PolicyType.NEVER,
-                                hscrollbar_policy=Gtk.PolicyType.AUTOMATIC)
-        sw.set_child(self.toggles)
+        self.mode_box.append(lbl)
+        self.switcher = ModeSwitcher([(k, label) for k, label, _ in MODES], self._on_mode_selected)
+        sw = Gtk.ScrolledWindow(vscrollbar_policy=Gtk.PolicyType.NEVER, hscrollbar_policy=Gtk.PolicyType.AUTOMATIC)
+        sw.set_child(self.switcher.widget)
         sw.set_propagate_natural_height(True)
-        mode_box.append(sw)
+        self.mode_box.append(sw)
         self.mode_desc = Gtk.Label(xalign=0, wrap=True)
         self.mode_desc.add_css_class("dim-label")
-        mode_box.append(self.mode_desc)
+        self.mode_box.append(self.mode_desc)
         self.control_lbl = Gtk.Label(xalign=0)
         self.control_lbl.add_css_class("caption")
-        mode_box.append(self.control_lbl)
-        box.append(mode_box)
+        self.mode_box.append(self.control_lbl)
+        box.append(self.mode_box)
 
-        # -- curve -----------------------------------------------------------------
-        curve_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        # -- curve ------------------------------------------------------------------
+        self.curve_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         lbl = Gtk.Label(label="Fan curve", xalign=0)
         lbl.add_css_class("heading")
-        curve_box.append(lbl)
+        self.curve_box.append(lbl)
         self.curve_sub = Gtk.Label(xalign=0, wrap=True)
         self.curve_sub.add_css_class("dim-label")
         self.curve_sub.add_css_class("caption")
-        curve_box.append(self.curve_sub)
+        self.curve_box.append(self.curve_sub)
         frame = Gtk.Box()
         frame.add_css_class("card")
         self.editor = CurveEditor(on_changed=self._on_curve_dragged)
@@ -149,7 +141,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.editor.set_margin_bottom(4)
         self.editor.set_margin_end(4)
         frame.append(self.editor)
-        curve_box.append(frame)
+        self.curve_box.append(frame)
         btns = Gtk.Box(spacing=8, halign=Gtk.Align.END)
         self.btn_reset = Gtk.Button(label="Discard")
         self.btn_reset.connect("clicked", self._on_discard)
@@ -160,28 +152,37 @@ class MainWindow(Adw.ApplicationWindow):
         btns.append(self.btn_apply)
         self.curve_btns = btns
         btns.set_visible(False)
-        curve_box.append(btns)
-        box.append(curve_box)
+        self.curve_box.append(btns)
+        box.append(self.curve_box)
 
         clamp = Adw.Clamp(maximum_size=720, child=box)
         scroller = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER, child=clamp)
         self.stack.add_titled_with_icon(scroller, "fans", "Fans", "weather-windy-symbolic")
         self.kbd_page = KeyboardPage(run_bg, self._toast)
-        profiles = {str(i): {"key": k, "label": l, "desc": d}
-                    for i, (k, l, d) in PERF_PROFILES.items()}
-        self.sys_page = SystemPage(run_bg, self._toast, profiles)
+        self.sys_page = SystemPage(run_bg, self._toast)
         self.kbd_stack_page = self.stack.add_titled_with_icon(
             self.kbd_page, "keyboard", "Keyboard", "input-keyboard-symbolic")
-        self.sys_stack_page = self.stack.add_titled_with_icon(
-            self.sys_page, "system", "System", "computer-symbolic")
+        self.stack.add_titled_with_icon(self.sys_page, "system", "System", "computer-symbolic")
+        self.kbd_stack_page.set_visible(False)
         view.set_content(self.stack)
         self.set_content(view)
 
         self.connect("close-request", self._on_close)
+        self._load_model()
         self._load_config()
         threading.Thread(target=self._poll_loop, daemon=True).start()
 
-    # -- daemon I/O ---------------------------------------------------------------
+    # -- layout helpers -------------------------------------------------------------
+    def _set_fan_labels(self, labels):
+        for c in self.fan_cards:
+            self.grid.remove(c)
+        self.fan_cards = []
+        for i, label in enumerate(labels):
+            card = StatCard(f"FAN {i + 1} · {label.upper()}")
+            self.grid.attach(card, i % 2, 1 + i // 2, 1, 1)
+            self.fan_cards.append(card)
+
+    # -- daemon I/O -------------------------------------------------------------------
     def _poll_loop(self):
         while self._alive:
             try:
@@ -190,13 +191,31 @@ class MainWindow(Adw.ApplicationWindow):
             except DaemonUnavailable as e:
                 GLib.idle_add(self._on_unavailable, str(e))
             except Exception as e:  # noqa: BLE001
-                GLib.idle_add(self._on_unavailable, f"error talking to acerfand: {e}")
+                GLib.idle_add(self._on_unavailable, f"Error talking to aocd: {e}")
             time.sleep(1.0)
+
+    def _load_model(self):
+        def done(res, err):
+            if err is not None or not res.get("ok"):
+                GLib.timeout_add_seconds(2, lambda: (self._load_model(), False)[1])
+                return
+            self.model = res
+            caps = res.get("capabilities") or {}
+            labels = caps.get("fan_labels") or []
+            self._set_fan_labels(labels)
+            has_fans = bool(labels)
+            self.mode_box.set_visible(has_fans)
+            self.curve_box.set_visible(has_fans)
+            self.kbd_stack_page.set_visible(bool(caps.get("keyboard")))
+            self.kbd_page.configure(caps)
+            self.sys_page.configure(res)
+        run_bg(lambda: request({"cmd": "get_model"}), done)
 
     def _load_config(self):
         def done(res, err):
             if err is None and res.get("ok"):
                 self.cfg = res["config"]
+                self.presets = res.get("presets") or {}
                 self._refresh_curve()
         run_bg(lambda: request({"cmd": "get_config"}), done)
 
@@ -206,14 +225,20 @@ class MainWindow(Adw.ApplicationWindow):
         self.set_controls_sensitive(False)
 
     def set_controls_sensitive(self, on: bool):
-        self.toggles.set_sensitive(on)
+        self.switcher.set_sensitive(on)
         self.btn_apply.set_sensitive(on)
 
     def _on_status(self, st: dict):
         if not st.get("ok", True):
             return self._on_unavailable(st.get("error", "daemon error"))
-        self.set_controls_sensitive(True)
-        if st.get("emergency"):
+        if self.model is None:
+            self._load_model()
+        self.read_only = bool(st.get("read_only"))
+        self.set_controls_sensitive(not self.read_only)
+        if self.read_only:
+            self.banner.set_title("No model profile matches this laptop: monitoring only.")
+            self.banner.set_revealed(True)
+        elif st.get("emergency"):
             self.banner.set_title("Temperature limit reached: fans forced to 100%")
             self.banner.set_revealed(True)
         elif st.get("fault"):
@@ -227,29 +252,23 @@ class MainWindow(Adw.ApplicationWindow):
         if st.get("gpu_asleep"):
             self.card_gpu.set("Idle", "dGPU asleep")
         else:
-            self.card_gpu.set("–" if gpu is None else f"{gpu:.0f}°C", "RTX 3050")
-        fans = st.get("fans") or {}
-        if fans:
-            self.card_f1.set(f"{fans.get('rpm1', 0)} rpm", f"{fans.get('duty1', 0)}% duty")
-            self.card_f2.set(f"{fans.get('rpm2', 0)} rpm", f"{fans.get('duty2', 0)}% duty")
+            self.card_gpu.set("–" if gpu is None else f"{gpu:.0f}°C", "dGPU")
+        for card, fan in zip(self.fan_cards, st.get("fans") or []):
+            card.set(f"{fan.get('rpm', 0)} rpm", f"{fan.get('duty', 0)}% duty")
 
         bios = bool(st.get("bios_control"))
         self.control_lbl.set_label(
-            "Fans controlled by: BIOS" if bios else f"Fans controlled by: AcerFan · target {st.get('target')}%")
+            "Fans controlled by: BIOS" if bios else f"Fans controlled by: {APP_NAME} · target {st.get('target')}%")
 
         mode = st.get("mode")
         if mode != self.mode:
             self.mode = mode
-            self._updating = True
-            self.toggles.set_active_name(mode)
-            self._updating = False
-            self.mode_desc.set_label(MODE_DESC.get(mode, ""))
+            self.switcher.set_active(mode)
+            self.mode_desc.set_label(MODE_DESC.get(mode or "", ""))
             self._refresh_curve()
 
         feats = st.get("features") or {}
         if feats:
-            av = feats.get("available") or {}
-            self.kbd_stack_page.set_visible(bool(av.get("keyboard")))
             self.kbd_page.update(feats.get("kbd"))
             self.sys_page.update(feats)
 
@@ -257,13 +276,13 @@ class MainWindow(Adw.ApplicationWindow):
         self.editor.set_live(max(temps) if temps else None, st.get("target"), bios)
         return False
 
-    # -- mode / curve -------------------------------------------------------------
+    # -- mode / curve -------------------------------------------------------------------
     def _curve_for_mode(self):
-        if self.mode in PROFILES:
-            return PROFILES[self.mode]
+        if self.mode and self.mode in self.presets:
+            return self.presets[self.mode]
         if self.cfg:
             return self.cfg["custom_curve"]
-        return PROFILES["balanced"]
+        return self.presets.get("balanced", [])
 
     def _refresh_curve(self):
         if self.draft is not None:
@@ -277,21 +296,16 @@ class MainWindow(Adw.ApplicationWindow):
         }.get(self.mode, "Preset curve. Drag a point to start a custom curve from it.")
         self.curve_sub.set_label(sub + " The x-axis is the hotter of CPU and GPU.")
 
-    def _on_mode_toggled(self, group, _pspec):
-        if self._updating:
-            return
-        mode = group.get_active_name()
+    def _on_mode_selected(self, mode: str):
         if not mode or mode == self.mode:
             return
-        self.mode_desc.set_label(MODE_DESC.get(mode, ""))
+        self.mode_desc.set_label(MODE_DESC.get(mode or "", ""))
 
         def done(res, err):
             if err or not res.get("ok"):
-                self._toast(f"Could not set mode: {err or res.get('error')}")
-                self._updating = True
-                if self.mode:
-                    self.toggles.set_active_name(self.mode)
-                self._updating = False
+                self._toast(f"Could not set mode: {describe_error(res, err)}")
+                self.switcher.set_active(self.mode)
+                self.mode_desc.set_label(MODE_DESC.get(self.mode or "", ""))
             else:
                 self.mode = mode
                 self.draft = None
@@ -316,12 +330,10 @@ class MainWindow(Adw.ApplicationWindow):
 
         def done(res, err):
             if err or not res.get("ok"):
-                self._toast(f"Could not apply curve: {err or res.get('error')}")
+                self._toast(f"Could not apply curve: {describe_error(res, err)}")
                 return
             self.draft = None
             self.curve_btns.set_visible(False)
-            if self.cfg is not None:
-                self.cfg["custom_curve"] = pts
             self._load_config()
         run_bg(lambda: request({"cmd": "set_curve", "points": pts, "activate": True}), done)
 
@@ -334,9 +346,9 @@ class MainWindow(Adw.ApplicationWindow):
         return False
 
 
-class AcerFanApp(Adw.Application):
-    def __init__(self):
-        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
+class AocApp(Adw.Application):
+    def __init__(self, app_id: str = APP_ID):
+        super().__init__(application_id=app_id, flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
         about = Gio.SimpleAction.new("about", None)
         about.connect("activate", self._about)
         self.add_action(about)
@@ -346,22 +358,23 @@ class AcerFanApp(Adw.Application):
         css = Gtk.CssProvider()
         data = CSS + PAGE_CSS.encode()
         css.load_from_data(data, len(data))
-        Gtk.StyleContext.add_provider_for_display(
-            Gdk.Display.get_default(), css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), css,
+                                                  Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
     def do_activate(self):
         win = self.props.active_window or MainWindow(self)
         win.present()
 
     def _about(self, *_):
-        Adw.AboutDialog(application_name="AcerFan", version=__version__,
-                        application_icon="acerfan",
-                        comments="Fan control for the Acer Aspire 7 A715-79G (Clevo NP50RN)",
+        Adw.AboutDialog(application_name=APP_NAME, version=__version__, application_icon=APP_ID,
+                        comments="Fan, keyboard and firmware control for Clevo-based Acer laptops.\n"
+                                 "Unofficial; not affiliated with or endorsed by Acer Inc.",
+                        website="https://github.com/narendra5155/acer-open-control",
                         license_type=Gtk.License.GPL_3_0).present(self.props.active_window)
 
 
 def main() -> int:
-    return AcerFanApp().run(sys.argv[:1])
+    return AocApp().run(sys.argv[:1])
 
 
 if __name__ == "__main__":

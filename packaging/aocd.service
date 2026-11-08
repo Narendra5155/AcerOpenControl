@@ -1,0 +1,30 @@
+[Unit]
+Description=AcerOpenControl daemon (fan curves, keyboard light, firmware features)
+Documentation=https://github.com/narendra5155/acer-open-control
+After=systemd-modules-load.service
+# Two fan controllers would fight over the EC.
+Conflicts=nbfc_service.service acerfan.service
+
+[Service]
+Type=simple
+ExecStartPre=-/sbin/modprobe acpi_call
+ExecStart=/usr/bin/aocd
+# Even if aocd is killed, never leave the fans under manual control.
+ExecStopPost=/usr/bin/aocctl restore-auto
+Restart=on-failure
+RestartSec=3
+RuntimeDirectory=acer-open-control
+RuntimeDirectoryMode=0755
+ConfigurationDirectory=acer-open-control
+# Hardening. aocd needs /proc/acpi/call, /dev/uinput, /dev/uleds, netlink and
+# module loading, so kernel-tunable/module protections cannot be enabled.
+ProtectSystem=full
+ReadWritePaths=/etc/acer-open-control
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+RestrictRealtime=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target

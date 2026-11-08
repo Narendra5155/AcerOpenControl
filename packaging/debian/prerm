@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+
+#DEBHELPER#
+
+# aocd's ExecStopPost already does this; repeat in case the service was not running.
+if [ "$1" = "remove" ] && [ -x /usr/bin/aocctl ]; then
+    /usr/bin/aocctl restore-auto >/dev/null 2>&1 || true
+fi

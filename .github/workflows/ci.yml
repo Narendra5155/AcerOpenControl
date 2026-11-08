@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - run: cargo test --workspace --all-features
+
+  python:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y python3-gi gir1.2-gtk-4.0 gir1.2-adw-1
+      - run: cd frontend && python3 -m unittest discover -s tests -t . -v
+
+  package:
+    runs-on: ubuntu-24.04
+    needs: [rust, python]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install -y lintian
+      - run: cargo install cargo-deb --locked
+      - run: packaging/build-all.sh dist
+      - run: lintian --fail-on error --suppress-tags-from-file packaging/lintian-overrides.txt dist/*.deb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: debs
+          path: dist/*.deb

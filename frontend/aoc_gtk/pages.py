@@ -1,4 +1,5 @@
-"""Keyboard and System pages for the AcerFan window."""
+"""Keyboard and System pages. Both configure themselves from the model's
+capabilities (`get_model`), so features a laptop lacks are hidden."""
 
 from __future__ import annotations
 
@@ -10,7 +11,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gdk, GLib, Gtk  # noqa: E402
 
-from ..client import request  # noqa: E402
+from .client import describe_error, request  # noqa: E402
 
 SWATCHES = [("White", "ffffff"), ("Red", "ff0000"), ("Orange", "ff6000"), ("Yellow", "ffcc00"),
             ("Green", "00ff00"), ("Cyan", "00ffff"), ("Blue", "0000ff"), ("Purple", "8000ff"),
@@ -20,15 +21,13 @@ PAGE_CSS = "".join(
     f".swatch-{h} {{ background: #{h}; min-width: 28px; min-height: 28px; border-radius: 99px;"
     f" padding: 0; box-shadow: inset 0 0 0 1px alpha(currentColor, .25); }}\n" for _, h in SWATCHES)
 
-# Profile order in the UI (firmware index, see acerfan.features.PERF_PROFILES)
-PROFILE_ORDER = [0, 1, 3, 2]
 
-
-def _call(run_bg, req: dict, on_done: Callable[[dict], None], on_error: Callable[[str], None]):
+def _call(run_bg, req: dict, on_error: Callable[[str], None],
+          on_done: Optional[Callable[[dict], None]] = None):
     def done(res, err):
         if err is not None or not res.get("ok"):
-            on_error(str(err) if err else res.get("error", "failed"))
-        else:
+            on_error(describe_error(res, err))
+        elif on_done:
             on_done(res)
     run_bg(lambda: request(req), done)
 
@@ -38,14 +37,13 @@ class KeyboardPage(Adw.PreferencesPage):
         super().__init__(title="Keyboard", icon_name="input-keyboard-symbolic")
         self.run_bg, self.on_error = run_bg, on_error
         self.state = {"r": 255, "g": 255, "b": 255, "brightness": 160}
-        self._last_on_brightness = 160
+        self.max_brightness = 255
+        self._last_on = 160
         self._updating = False
         self._debounce: Optional[int] = None
 
-        g = Adw.PreferencesGroup(title="Backlight",
-                                 description="Single-zone RGB keyboard light, set in the laptop firmware.")
+        g = Adw.PreferencesGroup(title="Backlight", description="Keyboard light, set in the laptop firmware.")
         self.add(g)
-
         self.on_row = Adw.SwitchRow(title="Keyboard light")
         self.on_row.connect("notify::active", self._on_toggle)
         g.add(self.on_row)
@@ -60,14 +58,14 @@ class KeyboardPage(Adw.PreferencesPage):
         row.add_suffix(self.scale)
         g.add(row)
 
-        row = Adw.ActionRow(title="Colour", subtitle="Pick any colour")
+        self.colour_row = Adw.ActionRow(title="Colour", subtitle="Pick any colour")
         self.color_btn = Gtk.ColorDialogButton(dialog=Gtk.ColorDialog(with_alpha=False))
         self.color_btn.set_valign(Gtk.Align.CENTER)
         self.color_btn.connect("notify::rgba", self._on_color_picked)
-        row.add_suffix(self.color_btn)
-        g.add(row)
+        self.colour_row.add_suffix(self.color_btn)
+        g.add(self.colour_row)
 
-        sw_row = Adw.PreferencesRow(activatable=False)
+        self.swatch_row = Adw.PreferencesRow(activatable=False)
         flow = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, max_children_per_line=9,
                            min_children_per_line=5, column_spacing=10, row_spacing=10,
                            margin_top=12, margin_bottom=12, margin_start=12, margin_end=12,
@@ -77,17 +75,25 @@ class KeyboardPage(Adw.PreferencesPage):
             b.add_css_class(f"swatch-{hx}")
             b.connect("clicked", self._on_swatch, hx)
             flow.append(b)
-        sw_row.set_child(flow)
-        g.add(sw_row)
+        self.swatch_row.set_child(flow)
+        g.add(self.swatch_row)
 
-        g2 = Adw.PreferencesGroup(title="Desktop integration")
+        g2 = Adw.PreferencesGroup(title="Keys")
         self.add(g2)
         g2.add(Adw.ActionRow(
-            title="GNOME brightness slider",
-            subtitle="The keyboard light is also exposed as a system LED, so GNOME's "
-                     "Quick Settings and keyboard-brightness keys can control it."))
+            title="Keyboard-light Fn keys",
+            subtitle="Brightness up/down, on/off and the colour key are handled by the "
+                     "AcerOpenControl service, so they work in any desktop."))
 
-    # -- updates from daemon -----------------------------------------------------------
+    def configure(self, caps: dict):
+        rgb = caps.get("keyboard") == "rgb-single-zone"
+        self.colour_row.set_visible(rgb)
+        self.swatch_row.set_visible(rgb)
+        self.max_brightness = int(caps.get("keyboard_max_brightness") or 255)
+        self._updating = True
+        self.scale.set_range(0, self.max_brightness)
+        self._updating = False
+
     def update(self, kbd: Optional[dict]):
         if not kbd or self._debounce is not None:
             return
@@ -96,20 +102,18 @@ class KeyboardPage(Adw.PreferencesPage):
         self.scale.set_value(kbd["brightness"])
         self.on_row.set_active(kbd["brightness"] > 0)
         if kbd["brightness"] > 0:
-            self._last_on_brightness = kbd["brightness"]
+            self._last_on = kbd["brightness"]
         rgba = Gdk.RGBA()
         rgba.parse(f"#{kbd['r']:02x}{kbd['g']:02x}{kbd['b']:02x}")
         if not rgba.equal(self.color_btn.get_rgba()):
             self.color_btn.set_rgba(rgba)
         self._updating = False
 
-    # -- user actions --------------------------------------------------------------------
     def _send(self, **changes):
         self.state.update(changes)
-        _call(self.run_bg, {"cmd": "set_kbd", **changes},
-              lambda r: None, lambda e: self.on_error(f"Keyboard: {e}"))
+        _call(self.run_bg, {"cmd": "set_kbd", **changes}, lambda e: self.on_error(f"Keyboard: {e}"))
 
-    def _on_scale(self, scale):
+    def _on_scale(self, _scale):
         if self._updating:
             return
         if self._debounce is not None:
@@ -120,7 +124,7 @@ class KeyboardPage(Adw.PreferencesPage):
         self._debounce = None
         v = int(self.scale.get_value())
         if v > 0:
-            self._last_on_brightness = v
+            self._last_on = v
         self._updating = True
         self.on_row.set_active(v > 0)
         self._updating = False
@@ -130,14 +134,14 @@ class KeyboardPage(Adw.PreferencesPage):
     def _on_toggle(self, row, _p):
         if self._updating:
             return
-        v = max(self._last_on_brightness, 32) if row.get_active() else 0
+        v = max(self._last_on, self.max_brightness // 8) if row.get_active() else 0
         self._updating = True
         self.scale.set_value(v)
         self._updating = False
         self._send(brightness=v)
 
     def _apply_colour(self, r, g, b):
-        bright = self.state.get("brightness") or max(self._last_on_brightness, 32)
+        bright = self.state.get("brightness") or max(self._last_on, self.max_brightness // 8)
         self._send(r=r, g=g, b=b, brightness=bright)
 
     def _on_swatch(self, _btn, hx):
@@ -156,34 +160,19 @@ class KeyboardPage(Adw.PreferencesPage):
 
 
 class SystemPage(Adw.PreferencesPage):
-    def __init__(self, run_bg, on_error, profiles: dict):
-        super().__init__(title="System", icon_name="preferences-system-symbolic")
+    def __init__(self, run_bg, on_error):
+        super().__init__(title="System", icon_name="computer-symbolic")
         self.run_bg, self.on_error = run_bg, on_error
         self._updating = False
+        self.profile_checks: dict = {}
 
-        # -- performance profile --
         self.g_perf = Adw.PreferencesGroup(
             title="Performance profile",
             description="Sets CPU and GPU power limits in the firmware. Higher limits mean more "
                         "speed, more heat and more fan noise.")
         self.add(self.g_perf)
-        self.profile_checks = {}
-        group_leader = None
-        for idx in PROFILE_ORDER:
-            info = profiles.get(str(idx)) or {"label": str(idx), "desc": ""}
-            row = Adw.ActionRow(title=info["label"], subtitle=info["desc"], activatable=True)
-            chk = Gtk.CheckButton(valign=Gtk.Align.CENTER)
-            if group_leader is None:
-                group_leader = chk
-            else:
-                chk.set_group(group_leader)
-            chk.connect("toggled", self._on_profile, idx)
-            row.add_prefix(chk)
-            row.set_activatable_widget(chk)
-            self.g_perf.add(row)
-            self.profile_checks[idx] = chk
+        self._perf_rows: list = []
 
-        # -- battery --
         self.g_batt = Adw.PreferencesGroup(
             title="Battery",
             description="Stopping the charge early keeps the battery healthier if the laptop "
@@ -201,7 +190,6 @@ class SystemPage(Adw.PreferencesPage):
         self.batt_status = Adw.ActionRow(title="Firmware setting", subtitle="–")
         self.g_batt.add(self.batt_status)
 
-        # -- privacy --
         self.g_priv = Adw.PreferencesGroup(title="Privacy")
         self.add(self.g_priv)
         self.cam_row = Adw.SwitchRow(title="Webcam",
@@ -210,11 +198,45 @@ class SystemPage(Adw.PreferencesPage):
         self.cam_row.connect("notify::active", self._on_webcam)
         self.g_priv.add(self.cam_row)
 
+        self.g_model = Adw.PreferencesGroup(title="Model")
+        self.add(self.g_model)
+        self.model_row = Adw.ActionRow(title="–", subtitle="")
+        self.g_model.add(self.model_row)
+
+    def configure(self, model: dict):
+        """Build rows from the daemon's get_model reply."""
+        caps = model.get("capabilities") or {}
+        for row in self._perf_rows:
+            self.g_perf.remove(row)
+        self._perf_rows, self.profile_checks = [], {}
+        leader = None
+        for p in model.get("perf_profiles") or []:
+            row = Adw.ActionRow(title=p.get("label", p.get("key")), subtitle=p.get("description", ""),
+                                activatable=True)
+            chk = Gtk.CheckButton(valign=Gtk.Align.CENTER)
+            if leader is None:
+                leader = chk
+            else:
+                chk.set_group(leader)
+            chk.connect("toggled", self._on_profile, p["index"])
+            row.add_prefix(chk)
+            row.set_activatable_widget(chk)
+            self.g_perf.add(row)
+            self._perf_rows.append(row)
+            self.profile_checks[p["index"]] = chk
+        self.g_perf.set_visible(bool(caps.get("perf_profile")))
+        self.g_batt.set_visible(bool(caps.get("battery_limit")))
+        self.g_priv.set_visible(bool(caps.get("webcam")))
+        m = model.get("model")
+        if m:
+            self.model_row.set_title(m.get("name", m.get("id", "")))
+            self.model_row.set_subtitle(f"Profile {m.get('id')} · {m.get('status')}")
+        else:
+            machine = (model.get("machine") or {}).get("product_name", "this machine")
+            self.model_row.set_title(f"No profile for {machine}")
+            self.model_row.set_subtitle("Monitoring only. See docs/ADDING_A_MODEL.md to add your laptop.")
+
     def update(self, f: dict):
-        av = f.get("available") or {}
-        self.g_perf.set_visible(bool(av.get("perf_profile")))
-        self.g_batt.set_visible(bool(av.get("battery_limit")))
-        self.g_priv.set_visible(bool(av.get("webcam")))
         self._updating = True
         p = f.get("perf_profile")
         if p in self.profile_checks and not self.profile_checks[p].get_active():
@@ -235,8 +257,7 @@ class SystemPage(Adw.PreferencesPage):
     def _on_profile(self, chk, idx):
         if self._updating or not chk.get_active():
             return
-        _call(self.run_bg, {"cmd": "set_perf_profile", "profile": idx},
-              lambda r: None, lambda e: self.on_error(f"Profile: {e}"))
+        _call(self.run_bg, {"cmd": "set_perf_profile", "profile": idx}, lambda e: self.on_error(f"Profile: {e}"))
 
     def _on_charge_changed(self, *_):
         if self._updating:
@@ -246,10 +267,9 @@ class SystemPage(Adw.PreferencesPage):
         stop = self.stops[self.stop_row.get_selected()]
         req = {"cmd": "set_charge_limit", "enabled": enabled, "stop": stop if enabled else 100,
                "start": stop - 5 if enabled else 95}
-        _call(self.run_bg, req, lambda r: None, lambda e: self.on_error(f"Battery: {e}"))
+        _call(self.run_bg, req, lambda e: self.on_error(f"Battery: {e}"))
 
     def _on_webcam(self, row, _p):
         if self._updating:
             return
-        _call(self.run_bg, {"cmd": "set_webcam", "on": row.get_active()},
-              lambda r: None, lambda e: self.on_error(f"Webcam: {e}"))
+        _call(self.run_bg, {"cmd": "set_webcam", "on": row.get_active()}, lambda e: self.on_error(f"Webcam: {e}"))

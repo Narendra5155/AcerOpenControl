@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>@APP_ID@</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>AcerOpenControl</name>
+  <summary>Fan, keyboard light and firmware control for Clevo-based Acer laptops</summary>
+  <description>
+    <p>Control fan curves, the keyboard backlight, performance profiles, the battery
+    charge limit and the webcam switch on supported Acer laptops built on Clevo
+    platforms. Unofficial; not affiliated with or endorsed by Acer Inc.</p>
+  </description>
+  <launchable type="desktop-id">@APP_ID@.desktop</launchable>
+  <url type="homepage">https://github.com/@OWNER@/@REPO@</url>
+  <url type="bugtracker">https://github.com/@OWNER@/@REPO@/issues</url>
+  <developer id="io.github.@OWNER@">
+    <name>Narendra Hindwar</name>
+  </developer>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="@VERSION@" date="2026-11-08"/>
+  </releases>
+</component>

@@ -1,0 +1,103 @@
+# AcerOpenControl model profile
+# Acer Aspire 7 A715-79G (Clevo NP50RN), BIOS 1.07.01RAC5.
+# Every value below was confirmed on real hardware with `aocctl probe`.
+# Schema reference: docs/ADDING_A_MODEL.md
+
+[model]
+id = "acer-aspire-a715-79g"
+name = "Acer Aspire 7 A715-79G"
+platform = "clevo-np50rn"
+status = "verified"            # verified | community | experimental
+notes = "Intel 13th gen + RTX 3050 6GB. Single-zone RGB keyboard."
+
+[match]
+dmi_product_name = ["Aspire A715-79G"]
+wmi_guid = "ABBC0F6D-8EA1-11D1-00A0-C90629100000"
+
+[firmware]
+wmbb_path = '\_SB.WMI.WMBB'
+set_index_cmd = 0x6B           # INDX = (size_code << 16) | offset
+read_ec_cmd = 0x73             # read EC RAM through the firmware
+
+[fans]
+count = 2
+labels = ["CPU", "GPU"]
+set_duty_cmd = 0x68            # byte n -> fan n+1, raw 0..255
+set_auto_cmd = 0x69            # bitmask of fans handed back to the EC
+auto_mask = 0x0F
+duty_offsets = [0xCE, 0xCF]
+rpm_offsets = [0xD0, 0xD2]
+rpm_endian = "big"
+rpm_dividend = 2156220         # rpm = dividend / raw
+# Measured: duty 255 -> 6360 / 5780 rpm; duty 76 -> 2500 / 2370 rpm.
+
+[keyboard]
+kind = "rgb-single-zone"
+cmd = 0x67
+colour_prefix = 0xF0000000     # | B<<16 | R<<8 | G   (EC CA 03)
+brightness_prefix = 0xF4000000 # | level              (EC CA 06)
+channel_shift = { red = 8, green = 0, blue = 16 }
+max_brightness = 255
+
+[performance]
+cmd = 0x79
+selector = 0x19
+current_path = '\_SB.PC00.LPCB.EC.CPCM'
+
+[[performance.profile]]
+index = 0
+key = "quiet"
+label = "Quiet"
+description = "CPU 15 W sustained / 30 W boost; quietest"
+
+[[performance.profile]]
+index = 1
+key = "power-saver"
+label = "Power saver"
+description = "CPU 15 W / 30 W; maximum battery life"
+
+[[performance.profile]]
+index = 3
+key = "balanced"
+label = "Balanced"
+description = "CPU 45 W / 115 W, GPU 60 W"
+
+[[performance.profile]]
+index = 2
+key = "performance"
+label = "Performance"
+description = "CPU 90 W / 115 W, GPU 70 W"
+
+[battery]
+cmd = 0x79
+thresholds_selector = 0x06     # arg = sel<<24 | stop<<8 | start
+enable_selector = 0x05         # arg = sel<<24 | enabled
+read_cmd = 0x77                # -> stop<<16 | start<<8 | enabled
+
+[webcam]
+cmd = 0x22
+off_value = 0
+
+[hotkeys]
+enable_cmd = 0x46              # sets WMI.HKDR; cleared again by sleep (_PTS)
+read_cmd = 0x01                # returns WMI.EVNT
+notify = 0xD0
+event_guid_prefix = "ABBC0F6B"
+# With HKDR set, _PSR stops calling AC.ADJP on charger changes; the daemon does it.
+ac_adjust_method = '\_SB.AC.ADJP'
+
+[hotkeys.map]
+"0x81" = "kbd-down"            # Fn + numpad -
+"0x82" = "kbd-up"              # Fn + numpad +
+"0x83" = "kbd-toggle"          # Fn + /
+"0x9F" = "kbd-colour-cycle"    # Fn + *
+"0xFD" = "touchpad-toggle"     # Fn + F1 (the EC sends on/off codes; treated as a toggle)
+"0xFC" = "touchpad-toggle"
+"0xF7" = "webcam-toggle"       # Fn + F10
+"0x59" = "profile-cycle"
+
+[safety]
+cpu_emergency = 92.0
+gpu_emergency = 85.0
+floor_pct = 20.0
+floor_temp = 60.0

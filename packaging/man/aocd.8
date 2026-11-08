@@ -1,0 +1,37 @@
+.TH AOCD 8 "2026-11-08" "acer-open-control 0.2.0" "System Administration"
+.SH NAME
+aocd \- AcerOpenControl daemon for Clevo-based Acer laptops
+.SH SYNOPSIS
+.B aocd
+.RB [ \-\-socket
+.IR path ]
+.RB [ \-\-config
+.IR path ]
+.RB [ \-\-models
+.IR dir ]
+.SH DESCRIPTION
+.B aocd
+controls fan speed, keyboard backlight, performance profile, battery charge
+limit, webcam power and Fn hotkeys through the laptop firmware's WMBB WMI
+method, using the acpi_call kernel module. It is normally started by systemd
+as
+.BR aocd.service .
+Laptop support comes from model profiles; with no matching profile the daemon
+runs read-only. When it stops, fans are handed back to the BIOS.
+.SH OPTIONS
+.TP
+.BI \-\-socket " path"
+Control socket (default /run/acer-open-control/aocd.sock).
+.TP
+.BI \-\-config " path"
+Settings file (default /etc/acer-open-control/config.json).
+.TP
+.BI \-\-models " dir"
+Load model profiles from this directory only.
+.SH FILES
+/usr/share/acer-open-control/models/*.toml, /etc/acer-open-control/models.d/*.toml,
+/etc/acer-open-control/config.json
+.SH SEE ALSO
+.BR aocctl (1),
+.BR aoc-gtk (1),
+/usr/share/doc/acer-open-control/

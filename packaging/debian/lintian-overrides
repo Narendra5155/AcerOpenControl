@@ -1,0 +1,1 @@
+acer-open-control: maintainer-script-calls-systemctl [postinst:*]

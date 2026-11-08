@@ -1,0 +1,9 @@
+#!/bin/sh
+# systemd-sleep hook: firmware state (hotkeys, fan duty) is reset by suspend;
+# ask aocd to reapply everything shortly after resume.
+case "$1" in
+    post)
+        (sleep 2; /usr/bin/aocctl reapply >/dev/null 2>&1) &
+        ;;
+esac
+exit 0

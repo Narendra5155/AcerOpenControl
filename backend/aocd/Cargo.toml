@@ -1,0 +1,63 @@
+[package]
+name = "aocd"
+description = "AcerOpenControl daemon: fan curves and firmware features for Clevo-based Acer laptops"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+readme = "../../README.md"
+
+[dependencies]
+aoc-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+log.workspace = true
+env_logger.workspace = true
+anyhow.workspace = true
+libc.workspace = true
+signal-hook.workspace = true
+
+[dev-dependencies]
+aoc-core = { workspace = true, features = ["testing"] }
+
+[features]
+# `aocd --fake`: run against an emulated A715-79G (GUI development, screenshots, CI).
+dev-fake = ["aoc-core/testing"]
+
+[package.metadata.deb]
+name = "acer-open-control"
+revision = "1"
+maintainer = "Narendra Hindwar <hindwarnarendra@gmail.com>"
+copyright = "2026, Narendra Hindwar"
+extended-description = """\
+Fan curves, keyboard backlight, performance profiles, battery charge limit,
+webcam switch and Fn hotkeys for Clevo-based Acer laptops, through the
+firmware's WMBB interface. Laptop support is described by model profiles
+(/usr/share/acer-open-control/models). Unofficial; not affiliated with Acer."""
+section = "utils"
+priority = "optional"
+depends = "$auto, acpi-call-dkms, systemd, adduser"
+recommends = "acer-open-control-gtk"
+changelog = "../../packaging/debian/changelog"
+maintainer-scripts = "../../packaging/debian/"
+assets = [
+    ["target/release/aocd", "usr/bin/", "755"],
+    ["target/release/aocctl", "usr/bin/", "755"],
+    ["../../models/*.toml", "usr/share/acer-open-control/models/", "644"],
+    ["../../packaging/aocd-sleep", "usr/lib/systemd/system-sleep/aocd", "755"],
+    ["../../packaging/acpi_call.conf", "usr/lib/modules-load.d/acer-open-control.conf", "644"],
+    ["../../packaging/debian/copyright", "usr/share/doc/acer-open-control/copyright", "644"],
+    ["../../packaging/debian/lintian-overrides", "usr/share/lintian/overrides/acer-open-control", "644"],
+    ["../../packaging/man/aocd.8", "usr/share/man/man8/aocd.8", "644"],
+    ["../../packaging/man/aocctl.1", "usr/share/man/man1/aocctl.1", "644"],
+    ["../../README.md", "usr/share/doc/acer-open-control/", "644"],
+    ["../../docs/USAGE.md", "usr/share/doc/acer-open-control/", "644"],
+    ["../../docs/TROUBLESHOOTING.md", "usr/share/doc/acer-open-control/", "644"],
+    ["../../docs/ADDING_A_MODEL.md", "usr/share/doc/acer-open-control/", "644"],
+    ["../../docs/HARDWARE.md", "usr/share/doc/acer-open-control/", "644"],
+    ["../../docs/PROTOCOL.md", "usr/share/doc/acer-open-control/", "644"],
+]
+systemd-units = { unit-name = "aocd", unit-scripts = "../../packaging/", enable = true, start = true, restart-after-upgrade = true }

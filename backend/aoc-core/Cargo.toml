@@ -1,0 +1,21 @@
+[package]
+name = "aoc-core"
+description = "Hardware access library for AcerOpenControl (Clevo WMBB firmware interface)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+log.workspace = true
+thiserror.workspace = true
+libc.workspace = true
+
+[features]
+# Exposes `aoc_core::fake` (firmware emulator) to other crates' tests.
+testing = []
