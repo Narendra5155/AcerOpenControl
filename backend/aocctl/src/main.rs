@@ -150,7 +150,23 @@ fn num(v: &Value) -> String {
 }
 
 fn print_status(st: &Value, model: Option<&Value>) {
-    let ctl = if st["bios_control"] == json!(true) { "BIOS".to_string() } else { format!("{}%", st["target"]) };
+    let ctl = if let Some(holder) = st["external"]["holder"].as_str() {
+        let fans: Vec<String> = st["external"]["fans"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .enumerate()
+            .map(|(i, d)| match d.as_u64() {
+                Some(d) => format!("fan{} {d}%", i + 1),
+                None => format!("fan{} BIOS", i + 1),
+            })
+            .collect();
+        format!("{holder}: {}", fans.join(", "))
+    } else if st["bios_control"] == json!(true) {
+        "BIOS".to_string()
+    } else {
+        format!("{}%", st["target"])
+    };
     if st["read_only"] == json!(true) {
         println!("!! READ-ONLY: no model profile matches this machine (see `aocctl profiles list`)");
     }

@@ -8,5 +8,6 @@ cd "$ROOT"
 mkdir -p "$OUT"
 cargo build --release --workspace --locked
 cargo deb -p aocd --no-build --output "$OUT"
+cargo deb -p aoc-coolercontrol --no-build --output "$OUT"
 packaging/gtk/build-deb.sh "$OUT"
 ls -l "$OUT"/*.deb

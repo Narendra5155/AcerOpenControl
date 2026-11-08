@@ -1,3 +1,10 @@
+acer-open-control (0.3.0-1) stable; urgency=medium
+
+  * CoolerControl integration: device-service plugin package, fan lease API
+    in aocd, lease-only access for the plugin account.
+
+ -- Narendra Hindwar <hindwarnarendra@gmail.com>  Sun, 08 Nov 2026 16:08:58 +0530
+
 acer-open-control (0.2.2-1) stable; urgency=medium
 
   * First public release: Rust daemon and CLI, model profiles, GTK

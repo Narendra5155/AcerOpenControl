@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.0
+
+- **CoolerControl integration.** New package `acer-open-control-coolercontrol`:
+  a CoolerControl device-service plugin that exposes the fans and aocd's CPU/GPU
+  temperatures. See docs/COOLERCONTROL.md.
+- **aocd fan lease API** (`claim_fans`, `set_fan_duty`, `release_fans`). Another
+  program can borrow the fans per fan, while the emergency override, minimum
+  floor and BIOS fallback stay active. The lease ends automatically when that
+  program's connection closes.
+- **Per-fan BIOS hand-back.**
+- **New access level for lease users** (`lease_users`, default `cc-plugin-user`):
+  they may borrow the fans and nothing else.
+- **The GUI and `aocctl status`** show when another program controls the fans.
+- **`packaging/bump-version.sh`** updates every version location at once.
+
 ## 0.2.2
 
 First public release.

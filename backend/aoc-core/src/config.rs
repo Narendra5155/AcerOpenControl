@@ -53,6 +53,9 @@ pub struct Config {
     pub ramp_down: f64,
     /// Use this model profile id even if the machine doesn't match it.
     pub force_profile: Option<String>,
+    /// Accounts allowed to borrow the fans (and nothing else), e.g. the
+    /// CoolerControl plugin's `cc-plugin-user`.
+    pub lease_users: Vec<String>,
     pub features: FeatureSettings,
 }
 
@@ -66,6 +69,7 @@ impl Default for Config {
             hysteresis: 4.0,
             ramp_down: 5.0,
             force_profile: None,
+            lease_users: vec!["cc-plugin-user".into()],
             features: FeatureSettings::default(),
         }
     }

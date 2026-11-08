@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+if [ "$1" = "configure" ] && [ -d /run/systemd/system ]; then
+    # coolercontrold only scans its plugins directory at startup.
+    if systemctl is-active --quiet coolercontrold 2>/dev/null; then
+        echo "acer-open-control-coolercontrol: restarting coolercontrold to load the plugin" >&2
+        systemctl restart coolercontrold || true
+    fi
+fi

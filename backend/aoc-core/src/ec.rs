@@ -118,6 +118,16 @@ impl Clevo {
         self.set(f.set_auto_cmd, f.auto_mask)
     }
 
+    /// Hand only some fans back to the EC: bit n of `fans` = fan n.
+    pub fn set_auto_fans(&self, fans: u32) -> Result<()> {
+        let f = self.fans_cfg()?;
+        let mask = fans & f.auto_mask;
+        if mask == 0 {
+            return Ok(());
+        }
+        self.set(f.set_auto_cmd, mask)
+    }
+
     pub fn read_fans(&self) -> Result<Vec<Fan>> {
         let f = self.fans_cfg()?;
         let mut out = Vec::with_capacity(f.count);
@@ -179,6 +189,11 @@ mod tests {
         assert_eq!(fw.last_call(), Some((0x68, 0x8080)));
         c.set_auto().unwrap();
         assert_eq!(fw.last_call(), Some((0x69, 0x0F)));
+        c.set_auto_fans(0b10).unwrap();
+        assert_eq!(fw.last_call(), Some((0x69, 0x02)));
+        fw.clear();
+        c.set_auto_fans(0b1_0000).unwrap(); // outside auto_mask: nothing sent
+        assert!(fw.calls().is_empty());
     }
 
     #[test]

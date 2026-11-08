@@ -1,0 +1,12 @@
+# CoolerControl plugin manifest for AcerOpenControl.
+# Installed by the acer-open-control-coolercontrol package.
+id = "aoc-coolercontrol"
+type = "device"
+description = "Laptop fans through AcerOpenControl (aocd): CoolerControl borrows the fans, aocd keeps its fail-safes."
+version = "0.3.0"
+url = "https://github.com/Narendra5155/AcerOpenControl"
+address = "/tmp/aoc-coolercontrol.sock"
+executable = "/usr/lib/acer-open-control/aoc-coolercontrol"
+# Runs as cc-plugin-user. aocd lets that account borrow the fans and nothing
+# else (lease_users in /etc/acer-open-control/config.json).
+privileged = false

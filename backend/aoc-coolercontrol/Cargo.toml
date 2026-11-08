@@ -1,0 +1,54 @@
+[package]
+name = "aoc-coolercontrol"
+description = "CoolerControl device-service plugin for AcerOpenControl"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version = "1.86"
+
+[dependencies]
+anyhow.workspace = true
+log.workspace = true
+env_logger.workspace = true
+serde_json.workspace = true
+tonic = "0.14"
+tonic-prost = "0.14"
+prost = "0.14"
+tokio = { version = "1", features = ["macros", "rt", "signal", "fs", "net", "io-util", "sync", "time"] }
+tokio-stream = { version = "0.1", features = ["net"] }
+
+[dev-dependencies]
+tower = "0.5"
+hyper-util = { version = "0.1", features = ["tokio"] }
+
+[build-dependencies]
+tonic-prost-build = "0.14"
+protox = "0.9"
+
+[package.metadata.deb]
+name = "acer-open-control-coolercontrol"
+revision = "1"
+maintainer = "Narendra Hindwar <hindwarnarendra@gmail.com>"
+copyright = "2026, Narendra Hindwar"
+extended-description = """\
+Exposes the laptop's fans and CPU/GPU temperatures to CoolerControl. CoolerControl
+borrows the fans from the AcerOpenControl daemon, which keeps its fail-safes
+(emergency full speed, minimum speed, BIOS fallback) and takes the fans back when
+CoolerControl lets go or the plugin stops. Unofficial; not affiliated with Acer."""
+section = "utils"
+priority = "optional"
+depends = "$auto, acer-open-control (>= 0.3.0)"
+recommends = "coolercontrold"
+enhances = "coolercontrold"
+changelog = "../../packaging/debian/changelog"
+maintainer-scripts = "../../packaging/coolercontrol/debian/"
+assets = [
+    ["target/release/aoc-coolercontrol", "usr/lib/acer-open-control/aoc-coolercontrol", "755"],
+    ["../../packaging/coolercontrol/manifest.toml", "var/lib/coolercontrol/plugins/aoc-coolercontrol/manifest.toml", "644"],
+    ["../../packaging/coolercontrol/debian/lintian-overrides", "usr/share/lintian/overrides/acer-open-control-coolercontrol", "644"],
+    ["../../packaging/man/aoc-coolercontrol.8", "usr/share/man/man8/aoc-coolercontrol.8", "644"],
+    ["../../packaging/debian/copyright", "usr/share/doc/acer-open-control-coolercontrol/copyright", "644"],
+    ["../../docs/COOLERCONTROL.md", "usr/share/doc/acer-open-control-coolercontrol/", "644"],
+]

@@ -1,9 +1,9 @@
 [workspace]
 resolver = "2"
-members = ["backend/aoc-core", "backend/aocd", "backend/aocctl"]
+members = ["backend/aoc-core", "backend/aocd", "backend/aocctl", "backend/aoc-coolercontrol"]
 
 [workspace.package]
-version = "0.2.2"
+version = "0.3.0"
 edition = "2021"
 license = "GPL-3.0-or-later"
 authors = ["Narendra Hindwar <hindwarnarendra@gmail.com>"]

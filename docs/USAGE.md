@@ -112,6 +112,12 @@ aocctl webcam off       # the camera disappears from the system (not just muted)
 aocctl webcam on
 ```
 
+## CoolerControl
+
+If you use [CoolerControl](https://gitlab.com/coolercontrol/coolercontrol), install
+`acer-open-control-coolercontrol` to drive these fans from it. See
+[COOLERCONTROL.md](COOLERCONTROL.md).
+
 ## Status and model information
 
 ```sh
@@ -136,6 +142,7 @@ afterwards. An invalid file is ignored and defaults are used.
 | `hysteresis` | `4.0` | °C the temperature must fall before slowing down |
 | `ramp_down` | `5.0` | max % decrease per step |
 | `force_profile` | `null` | use this profile id even if the laptop doesn't match it (dangerous) |
+| `lease_users` | `["cc-plugin-user"]` | accounts that may borrow the fans and nothing else ([COOLERCONTROL.md](COOLERCONTROL.md)) |
 | `features.hotkeys` | `true` | handle Fn hotkeys |
 | `features.gnome_kbd_slider` | `true` | expose the keyboard light as a system LED |
 | `features.keymap` | `{}` | extra or overriding hotkey mappings, e.g. `{"0x9F": "kbd-toggle"}` |

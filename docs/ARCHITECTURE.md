@@ -11,6 +11,8 @@ flowchart LR
     KN["Kernel ACPI netlink<br/>(Fn key events)"] --> D
     D -- uinput --> GNOME["GNOME (touchpad key)"]
     D -- uleds --> LED["/sys/class/leds/aoc::kbd_backlight"]
+    CC["coolercontrold"] -- gRPC --> PL["aoc-coolercontrol<br/>(Rust plugin)"]
+    PL -- "JSON lines + fan lease" --> SOCK
     P["models/*.toml"] --> D
 ```
 
@@ -21,6 +23,7 @@ flowchart LR
 | `backend/aoc-core` | Library: ACPI calls, EC access, fan curves, sensors, features, hotkey plumbing, model profiles, config |
 | `backend/aocd` | The daemon: control loop, request handler, permissions, socket server |
 | `backend/aocctl` | CLI client and the root-only probe tools |
+| `backend/aoc-coolercontrol` | CoolerControl device-service plugin (gRPC ↔ aocd) |
 | `frontend/aoc_gtk` | GTK4/libadwaita window (Python) |
 | `models/` | Model profiles shipped in the package |
 | `packaging/` | systemd unit, sleep hook, maintainer scripts, `.deb` and APT repository scripts |
@@ -74,13 +77,24 @@ They all share one `Mutex<Service>`, so every state change is serialised.
 4. `ExecStopPost=aocctl restore-auto` runs even after `SIGKILL` or a panic.
 5. The package's `prerm` runs `restore-auto` on removal.
 
+**Fan lease:** an external controller (the CoolerControl plugin) can borrow the
+fans with `claim_fans` / `set_fan_duty`. The lease is tied to the client
+connection; when the server thread for that connection ends,
+`Service::connection_closed` ends the lease. While it's held, the control step
+uses the requested per-fan duties instead of the curve. Fans without a duty are
+handed to the BIOS individually, using bit *n* of the auto mask. The emergency
+override and the floor still apply.
+
 **Read-only mode:** with no matching profile, or without `acpi_call`, the daemon
 still serves temperatures but rejects every change. Nothing is written to firmware.
 
-**Permissions:** the socket is `0666`. Each request's caller uid comes from
-`SO_PEERCRED`. Requests that change state need uid 0, or a user whose groups,
-looked up from the group database **for each request**, include `sudo`, `admin`,
-`wheel` or `acer-open-control`. Because the lookup uses the database rather than
+**Permissions:** the socket is `0666`. Each connection's caller uid comes from
+`SO_PEERCRED` and maps to one of three access levels:
+
+- **Admin:** uid 0, or a user whose groups, looked up from the group database,
+  include `sudo`, `admin`, `wheel` or `acer-open-control`.
+- **Fan lease:** a user named in `lease_users`. May only borrow the fans.
+- **Read-only:** everyone else. Because the lookup uses the database rather than
 the caller's session, a group change takes effect without a re-login.
 
 **Resume:** a `system-sleep` hook runs `aocctl reapply` two seconds after resume.

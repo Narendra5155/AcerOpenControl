@@ -1,0 +1,28 @@
+.TH AOC-COOLERCONTROL 8 "2026-11-08" "acer-open-control 0.3.0" "System Administration"
+.SH NAME
+aoc-coolercontrol \- CoolerControl device plugin for AcerOpenControl
+.SH SYNOPSIS
+.B aoc-coolercontrol
+.RB [ \-\-socket
+.IR path ]
+.RB [ \-\-aocd
+.IR path ]
+.RB [ \-\-debug ]
+.SH DESCRIPTION
+A CoolerControl device-service plugin. It is started by
+.B coolercontrold
+from /var/lib/coolercontrol/plugins/aoc-coolercontrol/ and exposes the laptop's
+fans and aocd's CPU/GPU temperatures to CoolerControl over gRPC. Fan control is
+borrowed from
+.BR aocd (8),
+which keeps its fail-safes and takes the fans back as soon as the plugin stops.
+.SH OPTIONS
+.TP
+.BI \-\-socket " path"
+gRPC socket for coolercontrold (default /tmp/aoc-coolercontrol.sock).
+.TP
+.BI \-\-aocd " path"
+aocd socket (default /run/acer-open-control/aocd.sock).
+.SH SEE ALSO
+.BR aocd (8),
+.BR aocctl (1)

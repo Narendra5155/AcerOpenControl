@@ -2,7 +2,8 @@
 # Set the project version everywhere it lives, then refresh Cargo.lock.
 #   packaging/bump-version.sh 0.2.3 ["Changelog line"]
 # Updates: Cargo.toml, Cargo.lock, frontend/aoc_gtk/__init__.py,
-# packaging/debian/changelog (new top entry), man page headers.
+# packaging/debian/changelog (new top entry), man page headers, the
+# CoolerControl plugin manifest and its dependency on the backend package.
 # CHANGELOG.md is left for you to write.
 set -eu
 NEW="${1:?usage: $0 X.Y.Z [\"changelog line\"]}"
@@ -16,13 +17,15 @@ OLD="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
 sed -i "0,/^version = \".*\"/s//version = \"$NEW\"/" Cargo.toml
 sed -i "s/^__version__ = \".*\"/__version__ = \"$NEW\"/" frontend/aoc_gtk/__init__.py
 sed -i -E "s/^(\.TH [A-Z-]+ [0-9] \"[^\"]*\" \"[a-z-]+ )[0-9.]+\"/\1$NEW\"/" packaging/man/*.[18]
+sed -i "s/^version = \".*\"/version = \"$NEW\"/" packaging/coolercontrol/manifest.toml
+sed -i "s/acer-open-control (>= [0-9.]*)/acer-open-control (>= $NEW)/" backend/aoc-coolercontrol/Cargo.toml
 
 if ! head -1 packaging/debian/changelog | grep -q "($NEW-1)"; then
     tmp="$(mktemp)"
     {
         echo "acer-open-control ($NEW-1) stable; urgency=medium"
         echo
-        echo "  * $MSG" | fold -s -w 76 | sed '2,$s/^/    /'
+        echo "  * $MSG" | fold -s -w 76 | sed -e 's/ *$//' -e '2,$s/^/    /'
         echo
         echo " -- $MAINTAINER  $(date -R)"
         echo

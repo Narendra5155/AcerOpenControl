@@ -1,0 +1,2 @@
+acer-open-control-coolercontrol: maintainer-script-calls-systemctl [postinst:*]
+acer-open-control-coolercontrol: maintainer-script-calls-systemctl [postrm:*]

@@ -31,6 +31,16 @@ pub const KBD_CYCLE: &[(u8, u8, u8)] = &[
     (255, 32, 128),
 ];
 
+/// Fans lent to an external controller (e.g. the CoolerControl plugin).
+/// Valid only while the client connection that claimed it stays open.
+#[derive(Debug, Clone)]
+pub struct Lease {
+    pub conn: u64,
+    pub holder: String,
+    /// Requested duty per fan in percent; `None` = the BIOS controls that fan.
+    pub fans: Vec<Option<u8>>,
+}
+
 pub type SaveFn = Box<dyn Fn(&Config) + Send>;
 pub type Clock = Box<dyn Fn() -> f64 + Send>;
 
@@ -60,6 +70,9 @@ pub struct Service {
     fans: Vec<Fan>,
     target: Option<u8>,
     feature_state: Value,
+    pub lease: Option<Lease>,
+    /// What was last sent while leased (per fan; `None` = BIOS).
+    applied_ext: Option<Vec<Option<u8>>>,
 
     pub kbd_led: Option<KbdLed>,
     pub vkbd: Option<VirtualKeyboard>,
@@ -121,6 +134,8 @@ impl Service {
             fans: Vec::new(),
             target: None,
             feature_state: json!({}),
+            lease: None,
+            applied_ext: None,
             kbd_led: None,
             vkbd: None,
             hotkeys_enabled: false,
@@ -163,10 +178,38 @@ impl Service {
             }
         }
         self.applied_duty = None;
+        self.applied_ext = None;
         self.last_sent = (self.clock)();
         if let Some(r) = reason {
             log::warn!("fans handed to BIOS: {r}");
         }
+        Ok(())
+    }
+
+    /// True while any fan runs on a duty sent by aocd (not the BIOS).
+    fn under_manual(&self) -> bool {
+        self.applied_duty.is_some() || self.applied_ext.as_ref().is_some_and(|v| v.iter().any(Option::is_some))
+    }
+
+    /// Per-fan apply: fans with a duty get it, the others go back to the BIOS.
+    fn send_ext(&mut self, targets: &[Option<u8>]) -> aoc_core::Result<()> {
+        if let Some(ec) = &self.ec {
+            if targets.iter().any(Option::is_some) {
+                // Fans staying on the BIOS get their current duty so nothing jumps
+                // in the moment before they are handed back.
+                let duties: Vec<f64> = targets
+                    .iter()
+                    .enumerate()
+                    .map(|(i, t)| t.unwrap_or_else(|| self.fans.get(i).map_or(0, |f| f.duty)) as f64)
+                    .collect();
+                ec.set_duty(&duties)?;
+            }
+            let auto: u32 = targets.iter().enumerate().filter(|(_, t)| t.is_none()).map(|(i, _)| 1u32 << i).sum();
+            ec.set_auto_fans(auto)?;
+        }
+        self.applied_duty = None;
+        self.applied_ext = Some(targets.to_vec());
+        self.last_sent = (self.clock)();
         Ok(())
     }
 
@@ -224,10 +267,11 @@ impl Service {
         let now = (self.clock)();
         let refresh_due = now - self.last_sent >= self.cfg.refresh_interval;
 
-        if self.cfg.mode == "auto" {
+        let leased = self.lease.as_ref().map(|l| l.fans.clone());
+        if leased.is_none() && self.cfg.mode == "auto" {
             self.emergency = false;
             self.target = None;
-            if self.applied_duty.is_some() || self.force {
+            if self.under_manual() || self.force {
                 self.hand_to_bios(None)?;
             }
             self.force = false;
@@ -238,7 +282,7 @@ impl Service {
             self.sensor_fails += 1;
             if self.sensor_fails >= SENSOR_FAIL_LIMIT {
                 self.fault = Some("CPU temperature unavailable".into());
-                if self.applied_duty.is_some() || self.force {
+                if self.under_manual() || self.force {
                     self.hand_to_bios(Some("CPU temperature unavailable"))?;
                 }
                 self.force = false;
@@ -251,6 +295,24 @@ impl Service {
         let hottest = self.gpu.map_or(cpu, |g| g.max(cpu));
         let s = self.safety();
         self.emergency = cpu >= s.cpu_emergency || self.gpu.is_some_and(|g| g >= s.gpu_emergency);
+
+        if let Some(fans) = leased {
+            // Leased: the external controller picks each fan's duty, but the
+            // emergency override and the minimum-speed floor still apply.
+            let floor = s.floor_pct.round() as u8;
+            let targets: Vec<Option<u8>> = if self.emergency {
+                vec![Some(100); fans.len()]
+            } else {
+                fans.iter().map(|f| f.map(|d| if hottest >= s.floor_temp { d.max(floor) } else { d })).collect()
+            };
+            self.target = targets.iter().flatten().max().copied();
+            if self.force || self.applied_ext.as_deref() != Some(&targets[..]) || refresh_due {
+                self.send_ext(&targets)?;
+                self.force = false;
+            }
+            return Ok(());
+        }
+
         let curve_duty = self.controller.as_mut().map(|c| c.step(hottest));
         let target = if self.cfg.mode == "max" || self.emergency { 100 } else { curve_duty.unwrap_or(100) };
         self.target = Some(target);
@@ -275,12 +337,13 @@ impl Service {
             "gpu": self.gpu,
             "gpu_asleep": self.gpu_asleep,
             "target": self.target,
-            "bios_control": self.applied_duty.is_none(),
+            "bios_control": !self.under_manual(),
             "fans": self.fans,
             "emergency": self.emergency,
             "fault": self.fault,
             "features": self.feature_state,
             "hotkey": self.last_hotkey,
+            "external": self.lease.as_ref().map(|l| json!({"holder": l.holder, "fans": l.fans})),
         })
     }
 
@@ -310,7 +373,14 @@ impl Service {
     }
 
     // -- request handling ----------------------------------------------------------------
+    /// Handle a request that did not come over a socket connection (hotkeys,
+    /// the LED bridge, tests). Such callers can never hold a fan lease.
     pub fn handle(&mut self, req: &Value) -> Value {
+        self.handle_from(req, 0)
+    }
+
+    /// Handle a request from socket connection `conn` (ids start at 1).
+    pub fn handle_from(&mut self, req: &Value, conn: u64) -> Value {
         let cmd = req.get("cmd").and_then(Value::as_str).unwrap_or("");
         match cmd {
             "status" => return self.status(),
@@ -325,6 +395,14 @@ impl Service {
             return err(format!("unknown cmd {cmd:?}"));
         }
         match cmd {
+            "claim_fans" | "set_fan_duty" | "release_fans" => match self.handle_lease(cmd, req, conn) {
+                Ok(v) => v,
+                Err(e) => err(e),
+            },
+            "set_mode" if self.lease.is_some() => err(format!(
+                "the fans are controlled by {} right now; release them there first",
+                self.lease.as_ref().map_or("another program", |l| l.holder.as_str())
+            )),
             "set_mode" => {
                 let mode = req.get("mode").and_then(Value::as_str).unwrap_or("");
                 if !MODES.contains(&mode) {
@@ -369,6 +447,76 @@ impl Service {
                 }
             }
             _ => err(format!("unknown cmd {cmd:?}")),
+        }
+    }
+
+    // -- fan lease (external controllers such as CoolerControl) ---------------------------
+    fn handle_lease(&mut self, cmd: &str, req: &Value, conn: u64) -> Result<Value, Error> {
+        let n = self
+            .ec
+            .as_ref()
+            .and_then(|e| e.profile.fans.as_ref())
+            .map(|f| f.count)
+            .ok_or(Error::Unsupported("fan control"))?;
+        if conn == 0 {
+            return Err(Error::Invalid("fan leases need a socket connection".into()));
+        }
+        match cmd {
+            "claim_fans" => {
+                let holder = req.get("holder").and_then(Value::as_str).unwrap_or("external controller").to_string();
+                match &self.lease {
+                    Some(l) if l.conn != conn => {
+                        return Err(Error::Invalid(format!("fans are already controlled by {}", l.holder)))
+                    }
+                    Some(_) => {}
+                    None => {
+                        log::info!("fans lent to {holder}");
+                        // Start neutral: every fan on the BIOS until the holder sets a duty.
+                        self.lease = Some(Lease { conn, holder, fans: vec![None; n] });
+                        self.force = true;
+                        self.tick_safely();
+                    }
+                }
+            }
+            "set_fan_duty" => {
+                let lease = self.lease.as_mut().filter(|l| l.conn == conn).ok_or_else(|| {
+                    Error::Invalid("this connection does not hold the fans (send claim_fans first)".into())
+                })?;
+                let fan = req.get("fan").and_then(Value::as_u64).map(|f| f as usize).filter(|&f| f < n);
+                let fan = fan.ok_or_else(|| Error::Invalid(format!("fan must be 0..{}", n - 1)))?;
+                lease.fans[fan] = match req.get("duty") {
+                    None | Some(Value::Null) => None,
+                    Some(v) => Some(
+                        v.as_f64()
+                            .filter(|d| (0.0..=100.0).contains(d))
+                            .map(|d| d.round() as u8)
+                            .ok_or_else(|| Error::Invalid("duty must be 0..100 or null (BIOS)".into()))?,
+                    ),
+                };
+                self.tick_safely();
+            }
+            "release_fans" => {
+                if self.lease.as_ref().is_some_and(|l| l.conn == conn) {
+                    self.end_lease("released");
+                }
+            }
+            _ => return Err(Error::Invalid(format!("unknown cmd {cmd:?}"))),
+        }
+        Ok(json!({"ok": true, "external": self.lease.as_ref().map(|l| json!({"holder": l.holder, "fans": l.fans}))}))
+    }
+
+    fn end_lease(&mut self, why: &str) {
+        if let Some(l) = self.lease.take() {
+            log::info!("fan lease of {} ended ({why}); back to mode {}", l.holder, self.cfg.mode);
+            self.rebuild_controller(); // fresh hysteresis state, force a resend
+            self.tick_safely();
+        }
+    }
+
+    /// Called by the server when a client connection closes.
+    pub fn connection_closed(&mut self, conn: u64) {
+        if self.lease.as_ref().is_some_and(|l| l.conn == conn) {
+            self.end_lease("client disconnected");
         }
     }
 

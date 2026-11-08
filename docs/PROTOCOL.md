@@ -13,7 +13,8 @@ Requests refused for permission reasons also carry `"code": "forbidden"`.
 
 **Permissions:** read requests (`status`, `get_*`) are open to everyone.
 Requests marked ✎ need root or membership in `sudo`, `admin`, `wheel` or
-`acer-open-control`.
+`acer-open-control`. Accounts listed in the config's `lease_users` (default
+`cc-plugin-user`) may use only the three fan-lease requests.
 
 **Read-only mode:** when no model profile matches, every ✎ request fails
 with an error that starts `read-only:`.
@@ -33,7 +34,8 @@ with an error that starts `read-only:`.
               "kbd": {"r": 255, "g": 96, "b": 0, "brightness": 180},
               "perf_profile": 3, "charge": {"enabled": true, "start": 75, "stop": 80},
               "webcam": true},
- "hotkey": {"code": 131, "action": "kbd-toggle"}}
+ "hotkey": {"code": 131, "action": "kbd-toggle"},
+ "external": null}
 ```
 
 | Field | Meaning |
@@ -44,6 +46,7 @@ with an error that starts `read-only:`.
 | `bios_control` | `true` when the EC's own logic drives the fans |
 | `features` | refreshed about every 7.5 s and after each change; `kbd` is the last setting made through aocd (the firmware can't report it) |
 | `hotkey` | last Fn hotkey seen |
+| `external` | `null`, or `{"holder": "CoolerControl", "fans": [80, null]}` while another program has borrowed the fans (see below) |
 
 ### `{"cmd": "get_model"}`
 The matched profile summary: `model` (`id`, `name`, `platform`, `status`,
@@ -72,6 +75,25 @@ Same object as `status.features`, refreshed now.
 | `{"cmd": "reapply"}` | re-register hotkeys, reapply saved features, resend fan duty (used after resume) |
 
 The feature setters reply with the refreshed `features` object (plus `"ok": true`).
+
+## Borrowing the fans (✎ or lease users)
+
+External controllers such as the CoolerControl plugin can borrow the fans. The
+borrowing (*lease*) belongs to the **connection** that claimed it. When that
+connection closes for any reason, aocd ends the lease and its own fan mode resumes.
+
+| Request | Notes |
+|---|---|
+| `{"cmd": "claim_fans", "holder": "CoolerControl"}` | starts a lease; every fan starts on the BIOS. Fails if another connection holds the fans |
+| `{"cmd": "set_fan_duty", "fan": 0, "duty": 55}` | `fan` is 0-based; `duty` is 0–100, or `null` to hand that fan to the BIOS. Only from the connection holding the lease |
+| `{"cmd": "release_fans"}` | ends the lease |
+
+While the fans are borrowed:
+
+- **Fail-safes still apply:** emergency temperatures force 100%, the profile's
+  floor (20% at 60 °C or more) still holds, and sensor or firmware failures
+  hand the fans to the BIOS.
+- **Mode changes are refused:** `set_mode` fails with "the fans are controlled by …".
 
 ## Compatibility
 

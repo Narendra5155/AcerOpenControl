@@ -81,6 +81,8 @@ class MainWindow(Adw.ApplicationWindow):
         self.mode: Optional[str] = None
         self.draft: Optional[list] = None
         self.read_only = False
+        self._ext_shown = False
+        self._ext_was_curve = False
         self._alive = True
 
         view = Adw.ToolbarView()
@@ -257,8 +259,20 @@ class MainWindow(Adw.ApplicationWindow):
             card.set(f"{fan.get('rpm', 0)} rpm", f"{fan.get('duty', 0)}% duty")
 
         bios = bool(st.get("bios_control"))
-        self.control_lbl.set_label(
-            "Fans controlled by: BIOS" if bios else f"Fans controlled by: {APP_NAME} · target {st.get('target')}%")
+        ext = st.get("external")
+        if ext:
+            parts = [f"fan {i + 1}: " + ("BIOS" if d is None else f"{d}%") for i, d in enumerate(ext.get("fans") or [])]
+            self.control_lbl.set_label(f"Fans controlled by: {ext.get('holder')} · " + ", ".join(parts))
+            self.mode_desc.set_label(f"{ext.get('holder')} is controlling the fans. Fan modes come back "
+                                     f"when it releases them (reset the fans to Default there).")
+        else:
+            self.control_lbl.set_label(
+                "Fans controlled by: BIOS" if bios else f"Fans controlled by: {APP_NAME} · target {st.get('target')}%")
+            if self._ext_shown:
+                self.mode_desc.set_label(MODE_DESC.get(self.mode or "", ""))
+        self._ext_shown = bool(ext)
+        self.switcher.set_sensitive(not self.read_only and not ext)
+        self.btn_apply.set_sensitive(not self.read_only and not ext)
 
         mode = st.get("mode")
         if mode != self.mode:
@@ -273,7 +287,15 @@ class MainWindow(Adw.ApplicationWindow):
             self.sys_page.update(feats)
 
         temps = [t for t in (cpu, gpu) if t is not None]
-        self.editor.set_live(max(temps) if temps else None, st.get("target"), bios)
+        if ext:
+            # The curve isn't used while another program holds the fans: dim it.
+            self.editor.set_live(max(temps) if temps else None, None, True)
+            self.curve_sub.set_label(f"Not used while {ext.get('holder')} controls the fans.")
+        else:
+            self.editor.set_live(max(temps) if temps else None, st.get("target"), bios)
+            if self._ext_was_curve:
+                self._refresh_curve()
+        self._ext_was_curve = bool(ext)
         return False
 
     # -- mode / curve -------------------------------------------------------------------

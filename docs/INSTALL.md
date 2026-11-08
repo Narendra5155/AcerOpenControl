@@ -6,6 +6,7 @@ AcerOpenControl ships as two Debian packages:
 |---|---|---|
 | `acer-open-control` | the `aocd` service, the `aocctl` CLI, model profiles | `acpi-call-dkms` |
 | `acer-open-control-gtk` | the AcerOpenControl window | GTK 4, libadwaita, Python 3 |
+| `acer-open-control-coolercontrol` | optional [CoolerControl](COOLERCONTROL.md) plugin | CoolerControl 5+ |
 
 Supported systems: Ubuntu 24.04 or newer on amd64 (tested on 26.04). Debian 13 should also
 work. Other distributions can build from source.

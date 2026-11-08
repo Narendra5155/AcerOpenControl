@@ -8,6 +8,7 @@ use aoc_core::fake::{a715, FakeFirmware};
 use aoc_core::profile::{Loaded, Machine};
 use aoc_core::sensors::Sensors;
 
+use crate::auth::Access;
 use crate::server;
 use crate::service::Service;
 
@@ -296,12 +297,19 @@ fn read_only_without_profile() {
 fn permission_gate() {
     let r = rig(50.0);
     let svc = Mutex::new(r.svc);
-    let denied = server::respond(&svc, r#"{"cmd": "set_mode", "mode": "max"}"#, false);
+    let denied = server::respond(&svc, r#"{"cmd": "set_mode", "mode": "max"}"#, Access::ReadOnly, 1);
     assert_eq!(denied["code"], json!("forbidden"));
-    assert_eq!(server::respond(&svc, r#"{"cmd": "status"}"#, false)["ok"], json!(true));
-    assert_eq!(server::respond(&svc, r#"{"cmd": "set_mode", "mode": "max"}"#, true)["ok"], json!(true));
-    assert_eq!(server::respond(&svc, "not json", true)["error"], json!("invalid JSON"));
-    assert_eq!(server::respond(&svc, "[1]", true)["ok"], json!(false));
+    assert_eq!(server::respond(&svc, r#"{"cmd": "status"}"#, Access::ReadOnly, 1)["ok"], json!(true));
+    assert_eq!(server::respond(&svc, r#"{"cmd": "set_mode", "mode": "max"}"#, Access::Admin, 1)["ok"], json!(true));
+    assert_eq!(server::respond(&svc, "not json", Access::Admin, 1)["error"], json!("invalid JSON"));
+    assert_eq!(server::respond(&svc, "[1]", Access::Admin, 1)["ok"], json!(false));
+    // A lease-only account can borrow the fans but nothing else.
+    let claim = server::respond(&svc, r#"{"cmd": "claim_fans", "holder": "cc"}"#, Access::FanLease, 5);
+    assert_eq!(claim["ok"], json!(true));
+    let mode = server::respond(&svc, r#"{"cmd": "set_charge_limit", "stop": 80}"#, Access::FanLease, 5);
+    assert_eq!(mode["code"], json!("forbidden"));
+    let ro = server::respond(&svc, r#"{"cmd": "claim_fans"}"#, Access::ReadOnly, 6);
+    assert_eq!(ro["code"], json!("forbidden"), "ordinary users cannot borrow the fans");
 }
 
 #[test]
@@ -331,5 +339,118 @@ fn socket_roundtrip() {
     BufReader::new(c.try_clone().unwrap()).read_line(&mut line).unwrap();
     let v: serde_json::Value = serde_json::from_str(&line).unwrap();
     assert_eq!(v["mode"], json!("balanced"));
+    std::fs::remove_file(path).ok();
+}
+
+// -- fan lease (CoolerControl plugin) ------------------------------------------------------
+
+fn lease(r: &mut Rig, conn: u64, req: serde_json::Value) -> serde_json::Value {
+    r.svc.handle_from(&req, conn)
+}
+
+#[test]
+fn lease_starts_neutral_then_per_fan_duty() {
+    let mut r = rig(50.0); // below floor_temp, so no floor
+    r.svc.tick();
+    r.fw.clear();
+    assert_eq!(lease(&mut r, 7, json!({"cmd": "claim_fans", "holder": "CoolerControl"}))["ok"], json!(true));
+    assert_eq!(r.fan_calls(), vec![(0x69, 0x03)], "claim hands both fans to the BIOS");
+    assert_eq!(r.svc.status()["external"]["holder"], json!("CoolerControl"));
+    assert_eq!(r.svc.status()["bios_control"], json!(true));
+
+    r.svc.tick(); // refresh fan readback
+    let gpu_duty = r.svc.status()["fans"][1]["duty"].as_u64().unwrap() as f64;
+    let gpu_raw = aoc_core::ec::pct_to_raw(gpu_duty) as u32;
+    r.fw.clear();
+    assert_eq!(lease(&mut r, 7, json!({"cmd": "set_fan_duty", "fan": 0, "duty": 50}))["ok"], json!(true));
+    // fan 1 (GPU) stays on the BIOS: its current duty is written (no jump), then it is handed back
+    assert_eq!(r.fan_calls(), vec![(0x68, 128 | gpu_raw << 8), (0x69, 0x02)]);
+    assert_eq!(r.svc.status()["bios_control"], json!(false));
+
+    r.fw.clear();
+    lease(&mut r, 7, json!({"cmd": "set_fan_duty", "fan": 1, "duty": 70}));
+    assert_eq!(r.fan_calls(), vec![(0x68, 128 | 179 << 8)], "no BIOS hand-back when every fan is set");
+
+    r.fw.clear();
+    r.svc.tick();
+    assert!(r.fan_calls().is_empty(), "unchanged duties are not resent every tick");
+}
+
+#[test]
+fn lease_keeps_floor_and_emergency() {
+    let mut r = rig(65.0); // above floor_temp 60
+    lease(&mut r, 7, json!({"cmd": "claim_fans"}));
+    lease(&mut r, 7, json!({"cmd": "set_fan_duty", "fan": 0, "duty": 5}));
+    lease(&mut r, 7, json!({"cmd": "set_fan_duty", "fan": 1, "duty": 5}));
+    assert_eq!(r.fan_calls().last(), Some(&(0x68, 51 | 51 << 8)), "5 % raised to the 20 % floor");
+
+    r.set_cpu(Some(95.0));
+    r.svc.tick();
+    assert_eq!(r.fan_calls().last(), Some(&(0x68, 0xFFFF)), "emergency overrides the lease");
+    assert_eq!(r.svc.status()["emergency"], json!(true));
+}
+
+#[test]
+fn lease_is_exclusive_and_blocks_mode_changes() {
+    let mut r = rig(50.0);
+    lease(&mut r, 7, json!({"cmd": "claim_fans", "holder": "CoolerControl"}));
+    let other = lease(&mut r, 8, json!({"cmd": "claim_fans"}));
+    assert!(other["error"].as_str().unwrap().contains("already controlled by CoolerControl"));
+    assert_eq!(lease(&mut r, 8, json!({"cmd": "set_fan_duty", "fan": 0, "duty": 50}))["ok"], json!(false));
+    assert_eq!(r.svc.handle(&json!({"cmd": "claim_fans"}))["ok"], json!(false), "no lease without a connection");
+    let m = r.svc.handle_from(&json!({"cmd": "set_mode", "mode": "max"}), 8);
+    assert!(m["error"].as_str().unwrap().contains("controlled by CoolerControl"));
+    assert_eq!(lease(&mut r, 7, json!({"cmd": "set_fan_duty", "fan": 2, "duty": 50}))["ok"], json!(false));
+    assert_eq!(lease(&mut r, 7, json!({"cmd": "set_fan_duty", "fan": 0, "duty": 150}))["ok"], json!(false));
+    assert_eq!(lease(&mut r, 7, json!({"cmd": "claim_fans"}))["ok"], json!(true), "re-claim by holder is fine");
+}
+
+#[test]
+fn disconnect_or_release_returns_to_own_mode() {
+    let mut r = rig(65.0);
+    lease(&mut r, 7, json!({"cmd": "claim_fans"}));
+    lease(&mut r, 7, json!({"cmd": "set_fan_duty", "fan": 0, "duty": 90}));
+    r.svc.connection_closed(8); // someone else disconnecting changes nothing
+    assert!(r.svc.lease.is_some());
+    r.svc.connection_closed(7);
+    assert!(r.svc.lease.is_none());
+    assert_eq!(r.fan_calls().last(), Some(&DUTY_40), "balanced curve resumes at 65 °C");
+
+    lease(&mut r, 9, json!({"cmd": "claim_fans"}));
+    assert_eq!(lease(&mut r, 9, json!({"cmd": "release_fans"}))["external"], json!(null));
+    assert_eq!(r.fan_calls().last(), Some(&DUTY_40));
+}
+
+#[test]
+fn socket_disconnect_releases_lease() {
+    use std::io::{BufRead, BufReader, Write};
+    let r = rig(65.0);
+    let svc = Arc::new(Mutex::new(r.svc));
+    let path = std::env::temp_dir().join(format!("aoc-lease-{}.sock", std::process::id()));
+    let l = server::bind(&path).unwrap();
+    let s2 = svc.clone();
+    std::thread::spawn(move || server::serve(l, s2));
+    {
+        let mut c = std::os::unix::net::UnixStream::connect(&path).unwrap();
+        let mut rd = BufReader::new(c.try_clone().unwrap());
+        let mut line = String::new();
+        c.write_all(b"{\"cmd\": \"claim_fans\", \"holder\": \"test\"}\n").unwrap();
+        rd.read_line(&mut line).unwrap();
+        // Test processes run as a normal user; claiming needs an admin group.
+        let reply: serde_json::Value = serde_json::from_str(&line).unwrap();
+        if reply["ok"] != json!(true) {
+            assert_eq!(reply["code"], json!("forbidden"));
+            std::fs::remove_file(&path).ok();
+            return;
+        }
+        assert!(svc.lock().unwrap().lease.is_some());
+    } // connection dropped here
+    for _ in 0..50 {
+        if svc.lock().unwrap().lease.is_none() {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    assert!(svc.lock().unwrap().lease.is_none(), "lease must end when the client goes away");
     std::fs::remove_file(path).ok();
 }

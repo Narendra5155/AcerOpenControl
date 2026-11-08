@@ -36,6 +36,8 @@ AOC_SOCKET="$XDG_RUNTIME_DIR/aocd.sock" PYTHONPATH=frontend python3 -m aoc_gtk
 
 `--fake` runs the full daemon against the firmware emulator, with fixed
 temperatures (CPU 72 °C, GPU 61 °C). It's what the screenshots in the README use.
+For an end-to-end test of the CoolerControl plugin over real gRPC, see
+[COOLERCONTROL.md → For developers](COOLERCONTROL.md#for-developers).
 
 ### On the real laptop
 
@@ -60,6 +62,8 @@ sudo apt install ./dist/*.deb
   `backend/aocd/Cargo.toml`. The maintainer scripts are in `packaging/debian/`.
 - **GUI package:** built by `packaging/gtk/build-deb.sh`, from
   `packaging/gtk/*.in` and `packaging/meta.env`.
+- **CoolerControl plugin package:** built by `cargo deb -p aoc-coolercontrol`.
+  Its manifest and scripts are in `packaging/coolercontrol/`.
 
 ## Version numbers
 

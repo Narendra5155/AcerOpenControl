@@ -28,6 +28,8 @@ the vendor control apps on Windows.
 - **Webcam kill switch**: powers the camera off in the firmware.
 - **Fn hotkeys**: touchpad, camera and keyboard-light keys that do nothing on stock Linux.
 - **GTK4 app, CLI and system service**: settings survive reboots and suspend.
+- **CoolerControl plugin**: drive the fans from [CoolerControl](docs/COOLERCONTROL.md),
+  with AcerOpenControl's fail-safes still in place.
 - **Model profiles**: support for a laptop is a TOML file, not code. [Add yours](docs/ADDING_A_MODEL.md).
 
 ## Supported laptops
@@ -90,6 +92,7 @@ load will make it run hot. To return everything to stock, run `sudo apt remove a
 | [INSTALL](docs/INSTALL.md) | APT, .deb, from source, Secure Boot, uninstall |
 | [USAGE](docs/USAGE.md) | GUI, CLI, hotkeys, configuration file |
 | [TROUBLESHOOTING](docs/TROUBLESHOOTING.md) | Common problems and how to collect logs |
+| [COOLERCONTROL](docs/COOLERCONTROL.md) | Use the fans from CoolerControl |
 | [ADDING_A_MODEL](docs/ADDING_A_MODEL.md) | Probe your laptop and write a model profile |
 | [HARDWARE](docs/HARDWARE.md) | What the firmware interface does, command by command |
 | [ARCHITECTURE](docs/ARCHITECTURE.md) | How the pieces fit together |
