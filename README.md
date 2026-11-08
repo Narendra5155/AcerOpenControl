@@ -87,7 +87,7 @@ load will make it run hot. To return everything to stock, run `sudo apt remove a
 
 | | |
 |---|---|
-| [INSTALL](docs/INSTALL.md) | APT, .deb, from source, Secure Boot, uninstall, migrating from the prototype |
+| [INSTALL](docs/INSTALL.md) | APT, .deb, from source, Secure Boot, uninstall |
 | [USAGE](docs/USAGE.md) | GUI, CLI, hotkeys, configuration file |
 | [TROUBLESHOOTING](docs/TROUBLESHOOTING.md) | Common problems and how to collect logs |
 | [ADDING_A_MODEL](docs/ADDING_A_MODEL.md) | Probe your laptop and write a model profile |

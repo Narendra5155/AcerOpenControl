@@ -9,11 +9,6 @@ if [ "$1" = "configure" ]; then
         echo "  If Secure Boot is on, enrol the DKMS signing key (see https://github.com/Narendra5155/AcerOpenControl/blob/main/docs/INSTALL.md#secure-boot)." >&2
     fi
 
-    # The Python prototype ran its own service; two controllers would fight.
-    if [ -f /etc/systemd/system/acerfan.service ]; then
-        echo "acer-open-control: stopping the old 'acerfan' prototype service (settings are migrated)." >&2
-        systemctl disable --now acerfan.service >/dev/null 2>&1 || true
-    fi
     if systemctl is-active --quiet nbfc_service 2>/dev/null; then
         echo "acer-open-control: NOTE nbfc_service is running and will be stopped while aocd runs." >&2
         echo "  To keep it off permanently: sudo systemctl disable nbfc_service" >&2

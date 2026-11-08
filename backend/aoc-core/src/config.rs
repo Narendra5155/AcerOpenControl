@@ -1,6 +1,4 @@
 //! Persistent daemon settings (`/etc/acer-open-control/config.json`).
-//! The JSON shape is compatible with the Python prototype's
-//! `/etc/acerfan/config.json`, so that file can be migrated as-is.
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -14,7 +12,6 @@ use crate::{Error, Result};
 
 pub const CONFIG_DIR: &str = "/etc/acer-open-control";
 pub const CONFIG_PATH: &str = "/etc/acer-open-control/config.json";
-pub const LEGACY_CONFIG_PATH: &str = "/etc/acerfan/config.json";
 
 pub const MODES: &[&str] = &["auto", "silent", "balanced", "performance", "max", "custom"];
 
@@ -140,20 +137,5 @@ mod tests {
         fs::write(&p, r#"{"mode": "bogus"}"#).unwrap();
         assert_eq!(Config::load(&p).mode, "balanced");
         fs::remove_dir_all(dir).ok();
-    }
-
-    #[test]
-    fn reads_prototype_config() {
-        // Shape written by the Python prototype (extra keys are ignored).
-        let legacy = r#"{"mode": "custom", "custom_curve": [[40, 0], [90, 100]], "poll_interval": 1.5,
-            "refresh_interval": 30.0, "hysteresis": 4.0, "ramp_down": 5.0, "floor_pct": 20.0,
-            "floor_temp": 60.0, "cpu_emergency": 92.0, "gpu_emergency": 85.0,
-            "features": {"saved": {"kbd": {"r": 0, "g": 255, "b": 0, "brightness": 160},
-              "charge": {"enabled": true, "start": 75, "stop": 80}, "webcam": true, "perf_profile": 2}}}"#;
-        let c: Config = serde_json::from_str(legacy).unwrap();
-        c.validate().unwrap();
-        assert_eq!(c.features.saved.perf_profile, Some(2));
-        assert_eq!(c.features.saved.kbd.unwrap().g, 255);
-        assert!(c.features.hotkeys);
     }
 }

@@ -44,16 +44,20 @@ repository is then served at `https://narendra5155.github.io/AcerOpenControl/`.
 ## Each release
 
 1. Make sure `main` is green in CI.
-2. Bump the version in `Cargo.toml` (`[workspace.package] version`) and
-   `frontend/aoc_gtk/__init__.py`. Run `cargo build` to refresh `Cargo.lock`.
-3. Add entries to `CHANGELOG.md`, and to `packaging/debian/changelog` in Debian
-   format with the new version at the top.
+2. Set the new version everywhere (`Cargo.toml`, `Cargo.lock`,
+   `frontend/aoc_gtk/__init__.py`, the Debian changelog, man pages):
+
+   ```sh
+   packaging/bump-version.sh 0.2.3 "Short summary for the Debian changelog"
+   ```
+
+3. Add the user-facing notes to `CHANGELOG.md`.
 4. Commit, tag and push:
 
    ```sh
-   git commit -am "Release v0.2.1"
-   git tag -a v0.2.1 -m "v0.2.1"
-   git push origin main v0.2.1
+   git commit -am "Release v0.2.3"
+   git tag -a v0.2.3 -m "v0.2.3"
+   git push origin main v0.2.3
    ```
 
 5. Watch **Actions → Release**. The workflow refuses to run if the tag doesn't

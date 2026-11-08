@@ -1,8 +1,0 @@
-#!/bin/sh
-# systemd-sleep hook: the EC may reset fan state across suspend; ask acerfand to resend.
-case "$1" in
-    post)
-        (sleep 2; PYTHONPATH=/opt/acerfan /usr/bin/python3 -m acerfan reapply >/dev/null 2>&1) &
-        ;;
-esac
-exit 0

@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use aoc_core::acpi::{self, AcpiCall, Firmware};
-use aoc_core::config::{Config, CONFIG_PATH, LEGACY_CONFIG_PATH};
+use aoc_core::config::{Config, CONFIG_PATH};
 use aoc_core::hotkeys::{self, netlink::Listener, uinput};
 use aoc_core::kbd_led::KbdLed;
 use aoc_core::profile::{self, Machine};
@@ -61,18 +61,6 @@ fn parse_args() -> anyhow::Result<Args> {
         }
     }
     Ok(a)
-}
-
-/// First start after upgrading from the Python prototype: carry its settings over.
-fn migrate_legacy_config(target: &Path) {
-    if target.exists() || !Path::new(LEGACY_CONFIG_PATH).exists() {
-        return;
-    }
-    let c = Config::load(Path::new(LEGACY_CONFIG_PATH));
-    match c.save(target) {
-        Ok(()) => log::info!("migrated settings from {LEGACY_CONFIG_PATH}"),
-        Err(e) => log::warn!("could not migrate {LEGACY_CONFIG_PATH}: {e}"),
-    }
 }
 
 fn main() {
@@ -148,7 +136,6 @@ fn clock() -> service::Clock {
 }
 
 fn build_real(args: &Args) -> (Service, bool) {
-    migrate_legacy_config(&args.config);
     let cfg = Config::load(&args.config);
     let machine = Machine::detect();
     let dirs: Vec<&Path> = args.models.iter().map(PathBuf::as_path).collect();

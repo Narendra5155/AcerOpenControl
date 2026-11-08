@@ -97,6 +97,6 @@ to linked toggle buttons on libadwaita older than 1.7.
 
 ## Why a JSON socket and not D-Bus?
 
-It carries over unchanged from the prototype. Anything that can write a line to
+It is simple: anything that can write a line to
 a Unix socket can drive it (shell, Python, Rust), and it needs no D-Bus policy
 files. D-Bus with polkit is a possible future addition; see [PROTOCOL.md](PROTOCOL.md).

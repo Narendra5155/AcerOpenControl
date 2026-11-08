@@ -1,8 +1,8 @@
 # Changelog
 
-## 0.2.0 (unreleased)
+## 0.2.2
 
-First public release, renamed from the AcerFan prototype to **AcerOpenControl**.
+First public release.
 
 - Backend rewritten in Rust: `aocd` daemon, `aocctl` CLI, `aoc-core` library.
 - Model profiles (`models/*.toml`): laptop support is data, not code. New
@@ -13,7 +13,6 @@ First public release, renamed from the AcerFan prototype to **AcerOpenControl**.
 - GTK frontend split into its own package; hides features a model lacks; works
   with libadwaita older than 1.7.
 - Debian packages and a signed APT repository on GitHub Pages.
-- Settings from `/etc/acerfan/config.json` are migrated automatically.
 
 ### Planned
 - Tray icon.

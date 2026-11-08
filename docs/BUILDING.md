@@ -63,7 +63,8 @@ sudo apt install ./dist/*.deb
 
 ## Version numbers
 
-The version lives in three places, and the build checks that they agree:
+The version lives in several places; `packaging/bump-version.sh X.Y.Z` updates them
+all, and the build refuses to continue if they disagree:
 
 - `version` in the root `Cargo.toml`
 - `__version__` in `frontend/aoc_gtk/__init__.py`

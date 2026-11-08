@@ -1,4 +1,4 @@
-//! Service tests against the emulated firmware (ported from the Python prototype).
+//! Service tests against the emulated firmware.
 
 use serde_json::json;
 use std::sync::{Arc, Mutex};

@@ -81,13 +81,3 @@ Removing the package hands the fans back to the BIOS. To drop the repository too
 ```sh
 sudo rm /etc/apt/sources.list.d/acer-open-control.list /usr/share/keyrings/acer-open-control.gpg
 ```
-
-## Migrating from the AcerFan prototype
-
-If you used the earlier Python version (`install.sh`, service `acerfan`):
-
-1. Install the packages as above. The package stops the old `acerfan` service,
-   and `aocd` copies your settings from `/etc/acerfan/config.json` on first start.
-2. Then remove the prototype's files: `sudo ./uninstall.sh` from the old checkout,
-   or manually:
-   `sudo rm -rf /opt/acerfan /usr/local/bin/acerfan /etc/systemd/system/acerfan.service /usr/lib/systemd/system-sleep/acerfan`.
