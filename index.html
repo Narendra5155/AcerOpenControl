@@ -1,0 +1,13 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>AcerOpenControl APT repository</title>
+<style>body{font:16px/1.5 system-ui,sans-serif;max-width:46rem;margin:2rem auto;padding:0 1rem}pre{background:#f4f4f4;padding:1rem;overflow-x:auto}</style>
+<h1>AcerOpenControl APT repository</h1>
+<p>Unofficial fan, keyboard and firmware control for Clevo-based Acer laptops.
+Not affiliated with or endorsed by Acer Inc.</p>
+<pre>curl -fsSL https://narendra5155.github.io/AcerOpenControl/key.gpg | sudo tee /usr/share/keyrings/acer-open-control.gpg &gt;/dev/null
+echo "deb [signed-by=/usr/share/keyrings/acer-open-control.gpg] https://narendra5155.github.io/AcerOpenControl stable main" \
+  | sudo tee /etc/apt/sources.list.d/acer-open-control.list
+sudo apt update
+sudo apt install acer-open-control-gtk</pre>
+<p>Documentation and supported models: <a href="https://github.com/Narendra5155/AcerOpenControl">github.com/Narendra5155/AcerOpenControl</a></p>

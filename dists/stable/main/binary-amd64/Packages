@@ -1,0 +1,44 @@
+Package: acer-open-control-gtk
+Architecture: all
+Version: 0.2.2-1
+Priority: optional
+Section: utils
+Maintainer: Narendra Hindwar <hindwarnarendra@gmail.com>
+Installed-Size: 148
+Depends: acer-open-control (>= 0.2.2), python3 (>= 3.10), python3-gi, gir1.2-gtk-4.0, gir1.2-adw-1
+Filename: pool/main/acer-open-control-gtk_0.2.2-1_all.deb
+Size: 13232
+MD5sum: 1cb342dda1a7e6cbb34eb634b2eb04c7
+SHA1: eb92559641fae8b936df9d72d26a89ed8aa7394f
+SHA256: ab97f7ee5506b1d50212137a1195103d679e24da1140ba91a9695630c2f3226a
+SHA512: dafdf193bca623c83f27804b233d9250c769c71b44a3de9f09730f32318bc853cc82915d4e1cae67a43efd50b0aad30a54826738b01f176a6922acab4734006c
+Homepage: https://github.com/Narendra5155/AcerOpenControl
+Description: GTK interface for AcerOpenControl
+ Window for the AcerOpenControl daemon: live temperatures and fan speeds,
+ fan modes and a draggable fan curve, keyboard backlight colour and
+ brightness, performance profile, battery charge limit and webcam switch.
+ Unofficial; not affiliated with Acer.
+
+Package: acer-open-control
+Architecture: amd64
+Version: 0.2.2-1
+Priority: optional
+Section: utils
+Maintainer: Narendra Hindwar <hindwarnarendra@gmail.com>
+Installed-Size: 3161
+Depends: acpi-call-dkms, adduser, libc6 (>= 2.39), systemd
+Recommends: acer-open-control-gtk
+Filename: pool/main/acer-open-control_0.2.2-1_amd64.deb
+Size: 833720
+MD5sum: ce984d80cf4c806637dbb80b68708798
+SHA1: c5077d1e94ffac4368a9622ebb5bc6ed088f2bbe
+SHA256: 772a27a633b6d620ae7a73369a34517d01d87f603a57c62a9b4e3b4b7b25a56b
+SHA512: 8d0a22a86a3e5171a5223bf3bda16e278798a74ac7e2936018b582776fa5a6036c4bd7436d5783118dce3e4f8c2003fa567605960f00783d728bbd9752c84f60
+Homepage: https://github.com/Narendra5155/AcerOpenControl
+Description: AcerOpenControl daemon: fan curves and firmware features for Clevo-based Acer
+ laptops
+ Fan curves, keyboard backlight, performance profiles, battery charge limit,
+ webcam switch and Fn hotkeys for Clevo-based Acer laptops, through the
+ firmware's WMBB interface. Laptop support is described by model profiles
+ (/usr/share/acer-open-control/models). Unofficial; not affiliated with Acer.
+

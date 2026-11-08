@@ -1,0 +1,30 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Architectures: amd64
+Codename: stable
+Components: main
+Date: Sun, 08 Nov 2026 09:48:28 +0000
+Description: AcerOpenControl packages (unofficial; not affiliated with Acer)
+Label: AcerOpenControl
+Origin: AcerOpenControl
+Suite: stable
+MD5Sum:
+ 67faf694ee3030d2ae30b89564043f23             2101 main/binary-amd64/Packages
+ 051a7c7c652a21988bf355251cf5f1f0             1053 main/binary-amd64/Packages.gz
+SHA1:
+ 9fbc8acf646c3981137ce6c19924f02ba464b6ee             2101 main/binary-amd64/Packages
+ a939db31ce3724944d3fcdd5b47bf4a75909116e             1053 main/binary-amd64/Packages.gz
+SHA256:
+ 0a53f16c817d7899a18cb517331794be248d4491f4a15ffcaee72ebcd324a41c             2101 main/binary-amd64/Packages
+ 647601585518a9ddeb1b5d2d569fd5830433127127b9abb50157b25469f4a25f             1053 main/binary-amd64/Packages.gz
+SHA512:
+ 2c54dc908fd27a42c64fb8b0c115c09ed080ac2f05e147ca6ee2bca6020782b31615a3a9f89008f847cdddc73d094b267bec9ec4df5948ec81323396ca8a5537             2101 main/binary-amd64/Packages
+ 8e9e3b8c42832bad840ea19398c411c08565f99386ab55e68f54d8506ccfb11946e8b64c7ed2e029ab03e397c42757a2b7e8d64c2f4b3aff2347b955651af45c             1053 main/binary-amd64/Packages.gz
+-----BEGIN PGP SIGNATURE-----
+
+iHUEARYKAB0WIQTqvdfOLjc+mkGCoCrgk1yGptwvVQUCavBFbAAKCRDgk1yGptwv
+VVTOAQDgCxx8oSzXNQL+ZjyHhWUZlbDQ4Jl0ItzwQt/rU2B2tgD9GFi86SnCEhJX
+LK43Eb6r7uoUHpOvh9aNDWhfWvZhsgY=
+=BLuo
+-----END PGP SIGNATURE-----
